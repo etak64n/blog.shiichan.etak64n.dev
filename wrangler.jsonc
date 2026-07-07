@@ -33,7 +33,8 @@
       "developers.openai.com",
       "openai.com",
       "www.anthropic.com",
-      "anthropic.com"
+      "anthropic.com",
+      "jpwinsup.github.io"
     ],
     // Local development only. Keep empty in production (empty = disabled).
     // Override via .dev.vars
