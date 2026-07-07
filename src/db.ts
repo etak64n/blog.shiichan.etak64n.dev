@@ -13,16 +13,58 @@ export type ArticleRow = {
 
 export type ArticleListRow = Pick<
   ArticleRow,
-  'slug' | 'title' | 'summary' | 'source_name' | 'published_at'
+  'slug' | 'title' | 'summary' | 'source_name' | 'tags' | 'published_at'
 >
 
-export async function listArticles(db: D1Database, limit = 50): Promise<ArticleListRow[]> {
+export type TagCount = { tag: string; count: number }
+
+export type SourceCount = { source_name: string; count: number }
+
+const LIST_COLUMNS = 'slug, title, summary, source_name, tags, published_at'
+
+export async function listArticles(db: D1Database, limit = 100): Promise<ArticleListRow[]> {
   const { results } = await db
-    .prepare(
-      'SELECT slug, title, summary, source_name, published_at FROM articles ORDER BY published_at DESC LIMIT ?',
-    )
+    .prepare(`SELECT ${LIST_COLUMNS} FROM articles ORDER BY published_at DESC LIMIT ?`)
     .bind(limit)
     .all<ArticleListRow>()
+  return results
+}
+
+export async function listArticlesByTag(
+  db: D1Database,
+  tag: string,
+  limit = 100,
+): Promise<ArticleListRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT ${LIST_COLUMNS} FROM articles
+       WHERE EXISTS (SELECT 1 FROM json_each(articles.tags) AS je WHERE je.value = ?1)
+       ORDER BY published_at DESC LIMIT ?2`,
+    )
+    .bind(tag, limit)
+    .all<ArticleListRow>()
+  return results
+}
+
+export async function listTags(db: D1Database, limit = 60): Promise<TagCount[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT je.value AS tag, COUNT(*) AS count
+       FROM articles, json_each(articles.tags) AS je
+       GROUP BY je.value ORDER BY count DESC, tag ASC LIMIT ?`,
+    )
+    .bind(limit)
+    .all<TagCount>()
+  return results
+}
+
+export async function listSources(db: D1Database): Promise<SourceCount[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT source_name, COUNT(*) AS count
+       FROM articles GROUP BY source_name ORDER BY count DESC, source_name ASC`,
+    )
+    .all<SourceCount>()
   return results
 }
 

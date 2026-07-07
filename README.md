@@ -5,8 +5,10 @@ Fully automated blog that publishes articles ingested from sheechan-reporter
 
 ## Endpoints
 
-- `GET /` — article list (latest 50)
+- `GET /` — index: latest post featured, all posts, tag/source sidebar
 - `GET /posts/:slug` — article page (Markdown rendered server-side)
+- `GET /posts/:slug.md` — raw Markdown with YAML front matter (`text/markdown`)
+- `GET /tags/:tag` — articles carrying the tag (404 when the tag has no articles)
 - `POST /api/articles` — ingest (upsert), GitHub Actions OIDC auth
 - `DELETE /api/articles/:slug` — remove an article (rollback path), same auth
 

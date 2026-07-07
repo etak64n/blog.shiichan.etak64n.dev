@@ -1,7 +1,21 @@
 import { Hono } from 'hono'
 import { verifyIngestAuth } from './auth'
-import { deleteArticle, getArticle, listArticles, upsertArticle } from './db'
-import { renderArticlePage, renderIndexPage } from './render'
+import {
+  deleteArticle,
+  getArticle,
+  listArticles,
+  listArticlesByTag,
+  listSources,
+  listTags,
+  upsertArticle,
+} from './db'
+import {
+  renderArticleMarkdown,
+  renderArticlePage,
+  renderIndexPage,
+  renderNotFoundPage,
+  renderTagPage,
+} from './render'
 import { articleSchema } from './schema'
 
 const MAX_BODY_BYTES = 100_000
@@ -11,16 +25,37 @@ const app = new Hono<{ Bindings: Env }>()
 // ---- public pages ----
 
 app.get('/', async (c) => {
-  const articles = await listArticles(c.env.DB)
+  const [articles, tags, sources] = await Promise.all([
+    listArticles(c.env.DB),
+    listTags(c.env.DB),
+    listSources(c.env.DB),
+  ])
   c.header('cache-control', 'public, max-age=300')
-  return c.html(renderIndexPage(articles))
+  return c.html(renderIndexPage(articles, tags, sources))
 })
 
+// `/posts/<slug>.md` serves the raw markdown (slugs themselves never contain dots)
 app.get('/posts/:slug', async (c) => {
-  const article = await getArticle(c.env.DB, c.req.param('slug'))
+  const param = c.req.param('slug')
+  const wantsMarkdown = param.endsWith('.md')
+  const slug = wantsMarkdown ? param.slice(0, -'.md'.length) : param
+
+  const article = await getArticle(c.env.DB, slug)
   if (!article) return c.notFound()
   c.header('cache-control', 'public, max-age=300')
+
+  if (wantsMarkdown) {
+    c.header('content-type', 'text/markdown; charset=utf-8')
+    return c.body(renderArticleMarkdown(article))
+  }
   return c.html(await renderArticlePage(article))
+})
+
+app.get('/tags/:tag', async (c) => {
+  const articles = await listArticlesByTag(c.env.DB, c.req.param('tag'))
+  if (articles.length === 0) return c.notFound()
+  c.header('cache-control', 'public, max-age=300')
+  return c.html(renderTagPage(c.req.param('tag'), articles))
 })
 
 // ---- ingest API (GitHub Actions OIDC) ----
@@ -57,6 +92,11 @@ app.delete('/api/articles/:slug', async (c) => {
   const deleted = await deleteArticle(c.env.DB, c.req.param('slug'))
   if (!deleted) return c.json({ error: 'not found' }, 404)
   return c.json({ ok: true })
+})
+
+app.notFound((c) => {
+  if (c.req.path.startsWith('/api/')) return c.json({ error: 'not found' }, 404)
+  return c.html(renderNotFoundPage(), 404)
 })
 
 app.onError((err, c) => {
