@@ -34,6 +34,17 @@ function sourceColor(name: string): string {
   return '#3fd2ff'
 }
 
+// Lucide-style inline SVG icons (24x24 stroke), rendered at 14px via CSS
+const ICONS: Record<string, string> = {
+  'arrow-left': '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>',
+  'arrow-up-right': '<path d="M7 7h10v10"/><path d="M7 17 17 7"/>',
+  'file-code': '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m10 13-2 2 2 2"/><path d="m14 17 2-2-2-2"/>',
+}
+
+function icon(name: keyof typeof ICONS): string {
+  return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`
+}
+
 const FAVICON =
   'data:image/svg+xml,' +
   encodeURIComponent(
@@ -83,7 +94,17 @@ body::before {
 }
 ::selection { background: rgba(63, 210, 255, .3); }
 a { color: var(--cyan); }
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 4px; }
 .wrap { max-width: 1140px; margin: 0 auto; padding: 0 20px; }
+.icon { width: 14px; height: 14px; flex: none; }
+.skip {
+  position: absolute; left: -9999px;
+  font-family: var(--mono); font-size: .8rem; font-weight: 600;
+}
+.skip:focus {
+  left: 12px; top: 12px; position: fixed; z-index: 100;
+  background: var(--cyan); color: #04212e; padding: .6em 1.2em; border-radius: 8px;
+}
 
 /* ---- header ---- */
 .site-header {
@@ -100,8 +121,11 @@ a { color: var(--cyan); }
 }
 .logo .dot { color: var(--cyan); }
 .logo .cursor { color: var(--cyan); animation: blink 1.2s steps(1) infinite; }
-.site-nav { display: flex; gap: 1.4em; font-family: var(--mono); font-size: .78rem; letter-spacing: .08em; }
-.site-nav a { color: var(--dim); text-decoration: none; text-transform: uppercase; }
+.site-nav { display: flex; gap: .6em; font-family: var(--mono); font-size: .78rem; letter-spacing: .08em; }
+.site-nav a {
+  color: var(--dim); text-decoration: none; text-transform: uppercase;
+  padding: .8em .6em; transition: color .2s ease;
+}
 .site-nav a:hover { color: var(--cyan); }
 
 /* ---- hero ---- */
@@ -132,31 +156,40 @@ a { color: var(--cyan); }
 .section-title {
   font-family: var(--display); font-weight: 600; font-size: .82rem;
   letter-spacing: .2em; text-transform: uppercase; color: var(--dim);
-  margin: 2.2em 0 1em; display: flex; align-items: center; gap: .7em;
+  margin: 3.2em 0 1.2em; display: flex; align-items: center; gap: .7em;
 }
 .section-title::before { content: '▍'; color: var(--cyan); }
+.section-title::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--line-bright), transparent);
+}
 .section-title:first-child { margin-top: 0; }
 
 /* ---- cards ---- */
-.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(265px, 1fr)); gap: 14px; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(265px, 1fr)); gap: 16px; }
 .card {
   position: relative; display: flex; flex-direction: column; gap: .6em;
   background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-  padding: 18px 20px;
+  padding: 18px 20px; cursor: pointer;
   transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
   animation: rise .5s cubic-bezier(.2, .7, .3, 1) backwards;
 }
-.card:hover {
+.card:hover, .card:focus-within {
   transform: translateY(-3px);
   border-color: rgba(63, 210, 255, .55);
   box-shadow: 0 6px 26px rgba(63, 210, 255, .12);
 }
 .card h2, .card h3 { margin: 0; font-size: 1rem; line-height: 1.55; font-weight: 700; }
-.card h2 a, .card h3 a { color: var(--text); text-decoration: none; }
+.card h2 a, .card h3 a { color: var(--text); text-decoration: none; transition: color .2s ease; }
+.card:hover h2 a, .card:hover h3 a { color: var(--cyan); }
 .card h2 a::after, .card h3 a::after { content: ''; position: absolute; inset: 0; }
 .card .summary {
-  margin: 0; font-size: .85rem; color: var(--dim);
+  margin: 0; font-size: .875rem; color: var(--dim);
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+@media (min-width: 700px) {
+  .card.wide { grid-column: span 2; }
+  .card.wide .summary { -webkit-line-clamp: 2; }
 }
 .card.featured {
   border-color: var(--line-bright);
@@ -165,6 +198,9 @@ a { color: var(--cyan); }
 }
 .card.featured h2 { font-size: 1.3rem; }
 .card.featured .summary { -webkit-line-clamp: unset; font-size: .92rem; }
+.featured .corner { position: absolute; width: 14px; height: 14px; border: 2px solid var(--cyan); opacity: .65; }
+.featured .corner.tl { top: 9px; left: 9px; border-right: none; border-bottom: none; border-top-left-radius: 3px; }
+.featured .corner.br { bottom: 9px; right: 9px; border-left: none; border-top: none; border-bottom-right-radius: 3px; }
 .latest-label {
   align-self: flex-start; font-family: var(--mono); font-size: .68rem; font-weight: 600;
   letter-spacing: .16em; color: #04212e; background: var(--cyan);
@@ -179,17 +215,17 @@ a { color: var(--cyan); }
   width: 8px; height: 8px; border-radius: 2px; flex: none;
   background: var(--src-color, var(--cyan)); box-shadow: 0 0 8px var(--src-color, var(--cyan));
 }
-.tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+.tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
 .tag {
   position: relative; z-index: 2;
-  font-family: var(--mono); font-size: .7rem; letter-spacing: .02em;
+  font-family: var(--mono); font-size: .72rem; letter-spacing: .02em;
   color: var(--cyan-soft); text-decoration: none;
-  border: 1px solid var(--line); border-radius: 999px; padding: .05em .75em;
+  border: 1px solid var(--line); border-radius: 999px; padding: .25em .9em;
   background: rgba(63, 210, 255, .05);
-  transition: border-color .15s ease, color .15s ease;
+  transition: border-color .2s ease, color .2s ease, background .2s ease;
 }
-.tag:hover { border-color: var(--cyan); color: var(--cyan); }
-.tag.big { font-size: .78rem; padding: .25em 1em; }
+.tag:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(63, 210, 255, .12); }
+.tag.big { font-size: .78rem; padding: .35em 1em; }
 .tag .n { color: var(--dim); margin-left: .5em; }
 
 /* ---- sidebar ---- */
@@ -207,10 +243,12 @@ a { color: var(--cyan); }
 .about-text b { color: var(--cyan-soft); font-weight: 600; }
 
 /* ---- article page ---- */
-.article-wrap { max-width: 800px; margin: 0 auto; padding: 44px 20px 80px; }
+.article-wrap { max-width: 760px; margin: 0 auto; padding: 44px 20px 80px; }
 .backlink {
+  display: inline-flex; align-items: center; gap: .5em;
   font-family: var(--mono); font-size: .76rem; letter-spacing: .08em;
-  color: var(--dim); text-decoration: none;
+  color: var(--dim); text-decoration: none; padding: .5em 0;
+  transition: color .2s ease;
 }
 .backlink:hover { color: var(--cyan); }
 .article-title { font-size: clamp(1.4rem, 4vw, 1.9rem); line-height: 1.45; margin: .7em 0 .8em; }
@@ -221,13 +259,18 @@ a { color: var(--cyan); }
 }
 .article-meta .spacer { flex: 1; }
 .mdlink {
+  display: inline-flex; align-items: center; gap: .5em;
   font-family: var(--mono); font-size: .72rem; font-weight: 600; letter-spacing: .06em;
   color: var(--cyan); text-decoration: none;
-  border: 1px solid rgba(63, 210, 255, .4); border-radius: 6px; padding: .2em .8em;
-  transition: background .15s ease;
+  border: 1px solid rgba(63, 210, 255, .4); border-radius: 6px; padding: .45em .9em;
+  transition: background .2s ease;
 }
 .mdlink:hover { background: rgba(63, 210, 255, .12); }
-.srclink { font-family: var(--mono); font-size: .72rem; color: var(--dim); text-decoration: none; }
+.srclink {
+  display: inline-flex; align-items: center; gap: .4em;
+  font-family: var(--mono); font-size: .72rem; color: var(--dim); text-decoration: none;
+  padding: .45em 0; transition: color .2s ease;
+}
 .srclink:hover { color: var(--cyan); }
 
 .prose { font-size: 1rem; }
@@ -325,9 +368,10 @@ ${opts.head ?? ''}
 <style>${STYLE}</style>
 </head>
 <body>
+<a class="skip" href="#main">本文へスキップ</a>
 <header class="site-header">
   <div class="wrap">
-    <a class="logo" href="/">sheechan<span class="dot">.</span>blog<span class="cursor">▍</span></a>
+    <a class="logo" href="/">sheechan<span class="dot">.</span>blog<span class="cursor" aria-hidden="true">▍</span></a>
     <nav class="site-nav"><a href="/">Posts</a><a href="/#tags">Tags</a></nav>
   </div>
 </header>
@@ -351,17 +395,23 @@ function sourceBadge(name: string): string {
   return `<span class="src" style="--src-color:${sourceColor(name)}"><i></i>${esc(name)}</span>`
 }
 
-function articleCard(r: ArticleListRow, index: number, featured = false): string {
+function articleCard(
+  r: ArticleListRow,
+  index: number,
+  opts: { featured?: boolean; wide?: boolean } = {},
+): string {
+  const { featured = false, wide = false } = opts
   const tags = parseTags(r.tags)
   const chips = tags
-    .slice(0, featured ? 8 : 4)
+    .slice(0, featured || wide ? 8 : 4)
     .map((t) => tagChip(t))
     .join('')
   const delay = Math.min(index * 45, 500)
   const heading = featured ? 'h2' : 'h3'
+  const classes = ['card', featured && 'featured', wide && 'wide'].filter(Boolean).join(' ')
   return `
-<article class="card${featured ? ' featured' : ''}" style="animation-delay:${delay}ms">
-  ${featured ? '<span class="latest-label">LATEST</span>' : ''}
+<article class="${classes}" style="animation-delay:${delay}ms">
+  ${featured ? '<span class="corner tl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span><span class="latest-label">LATEST</span>' : ''}
   <${heading}><a href="/posts/${esc(r.slug)}">${esc(r.title)}</a></${heading}>
   <p class="meta">${sourceBadge(r.source_name)}<span>${esc(fmtDate(r.published_at))}</span></p>
   <p class="summary">${esc(r.summary)}</p>
@@ -389,14 +439,15 @@ export function renderIndexPage(
   </div>
 </section>`
 
+  // Bento rhythm: every fifth grid card stretches to a full row
   const mainCol = latest
     ? `
 <h2 class="section-title">Latest Post</h2>
-${articleCard(latest, 0, true)}
+${articleCard(latest, 0, { featured: true })}
 ${
   rest.length
     ? `<h2 class="section-title">All Posts</h2>
-<div class="card-grid">${rest.map((r, i) => articleCard(r, i + 1)).join('\n')}</div>`
+<div class="card-grid">${rest.map((r, i) => articleCard(r, i + 1, { wide: i % 5 === 3 })).join('\n')}</div>`
     : ''
 }`
     : '<p>まだ記事がありません。</p>'
@@ -419,18 +470,18 @@ ${
 
   return layout(
     { title: SITE_TITLE, canonicalPath: '/' },
-    `${hero}\n<div class="cols wrap"><main>${mainCol}</main><aside>${sideCol}</aside></div>`,
+    `${hero}\n<div class="cols wrap"><main id="main">${mainCol}</main><aside>${sideCol}</aside></div>`,
   )
 }
 
 export function renderTagPage(tag: string, rows: ArticleListRow[]): string {
   const main = `
 <section class="page-head wrap">
-  <p><a class="backlink" href="/">&larr; INDEX</a></p>
+  <p><a class="backlink" href="/">${icon('arrow-left')}INDEX</a></p>
   <h1>#${esc(tag)}</h1>
   <p class="count">${rows.length} POST${rows.length === 1 ? '' : 'S'}</p>
 </section>
-<section class="list-section wrap">
+<section class="list-section wrap" id="main">
   <div class="card-grid">${rows.map((r, i) => articleCard(r, i)).join('\n')}</div>
 </section>`
   return layout(
@@ -449,16 +500,16 @@ export async function renderArticlePage(row: ArticleRow): Promise<string> {
   const tags = parseTags(row.tags)
   const mdPath = `/posts/${row.slug}.md`
   const main = `
-<div class="article-wrap">
-  <p><a class="backlink" href="/">&larr; INDEX</a></p>
+<div class="article-wrap" id="main">
+  <p><a class="backlink" href="/">${icon('arrow-left')}INDEX</a></p>
   <article>
     <h1 class="article-title">${esc(row.title)}</h1>
     <div class="article-meta">
       <p class="meta" style="margin:0">${sourceBadge(row.source_name)}<span>${esc(fmtDate(row.published_at))}</span></p>
       ${tags.map((t) => tagChip(t)).join('')}
       <span class="spacer"></span>
-      <a class="srclink" href="${esc(row.source_url)}" rel="noopener">原文 &nearr;</a>
-      <a class="mdlink" href="${esc(mdPath)}">RAW .md</a>
+      <a class="srclink" href="${esc(row.source_url)}" rel="noopener">原文${icon('arrow-up-right')}</a>
+      <a class="mdlink" href="${esc(mdPath)}">${icon('file-code')}RAW .md</a>
     </div>
     <div class="prose">${bodyHtml}</div>
   </article>
@@ -495,10 +546,10 @@ export function renderArticleMarkdown(row: ArticleRow): string {
 export function renderNotFoundPage(): string {
   return layout(
     { title: `404 | ${SITE_TITLE}` },
-    `<div class="notfound wrap">
+    `<div class="notfound wrap" id="main">
   <h1>404 // NOT FOUND</h1>
   <p>ごめんね、このページは見つからなかったよ。</p>
-  <p><a class="backlink" href="/">&larr; INDEX</a></p>
+  <p><a class="backlink" href="/">${icon('arrow-left')}INDEX</a></p>
 </div>`,
   )
 }
