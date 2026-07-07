@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "blog-sheechan",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-07",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "routes": [
+    { "pattern": "blog.sheechan.etak64n.dev", "custom_domain": true }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "blog-sheechan",
+      // Replace with the id from `wrangler d1 create blog-sheechan`
+      "database_id": "REPLACE_WITH_wrangler_d1_create_OUTPUT",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // GitHub Actions OIDC: only this audience/sub combination may publish
+    "OIDC_AUDIENCE": "https://blog.sheechan.etak64n.dev",
+    "ALLOWED_OIDC_SUB": "repo:etak64n/sheechan-reporter:ref:refs/heads/main",
+    // Domains allowed in source_url. When adding a site to the watcher's
+    // sources.json, add its domain here and deploy (defense in depth against
+    // arbitrary-link injection if auth were ever bypassed)
+    "ALLOWED_SOURCE_HOSTS": [
+      "aws.amazon.com",
+      "blog.cloudflare.com",
+      "openai.com",
+      "www.anthropic.com",
+      "anthropic.com"
+    ],
+    // Local development only. Keep empty in production (empty = disabled).
+    // Override via .dev.vars
+    "DEV_BEARER_TOKEN": ""
+  }
+}

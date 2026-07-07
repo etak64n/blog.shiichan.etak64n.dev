@@ -1,0 +1,74 @@
+# blog.sheechan.etak64n.dev
+
+Fully automated blog that publishes articles ingested from sheechan-reporter
+(a GitHub Actions bot). Cloudflare Workers + Hono + D1.
+
+## Endpoints
+
+- `GET /` — article list (latest 50)
+- `GET /posts/:slug` — article page (Markdown rendered server-side)
+- `POST /api/articles` — ingest (upsert), GitHub Actions OIDC auth
+- `DELETE /api/articles/:slug` — remove an article (rollback path), same auth
+
+## Auth model
+
+The ingest API accepts only GitHub Actions OIDC tokens:
+
+1. JWT verified with `jose` (signature against GitHub's JWKS, `iss`, `aud`, expiry)
+2. `sub` must exactly equal `ALLOWED_OIDC_SUB`
+   (= `repo:etak64n/sheechan-reporter:ref:refs/heads/main`)
+
+No long-lived secret is stored anywhere. Nothing but the watcher repository's
+Actions on `main` can publish.
+
+For local development only, put `DEV_BEARER_TOKEN=<random string>` in `.dev.vars`
+to allow that bearer token as well (empty in production = disabled).
+
+## Ingest payload (validated with zod)
+
+```json
+{
+  "slug": "aws-lambda-example",
+  "title": "Article title (Japanese)",
+  "summary": "One or two sentence summary",
+  "body_md": "Markdown body (raw HTML rejected, 64KB max)",
+  "source_url": "https://aws.amazon.com/blogs/aws/... (ALLOWED_SOURCE_HOSTS domains only)",
+  "source_name": "AWS (free-form string; `name` from the watcher's sources.json)",
+  "tags": ["lambda", "serverless"],
+  "published_at": "2026-07-07T00:00:00Z"
+}
+```
+
+## Setup
+
+```sh
+npm install
+npx wrangler d1 create blog-sheechan   # paste the database_id into wrangler.jsonc
+npm run db:migrate:remote
+npm run check                          # typecheck
+npm run deploy                         # served at blog.sheechan.etak64n.dev via routes
+```
+
+Local development:
+
+```sh
+npm run db:migrate:local
+npm run dev
+```
+
+## Adding a monitored site
+
+Together with adding it to the watcher's `sources.json`, add the new site's
+domain to `ALLOWED_SOURCE_HOSTS` in `wrangler.jsonc` and `npm run deploy`
+(used for the source_url host allowlist check).
+
+## Removing an article
+
+```sh
+# From the watcher repo's Actions, or locally using the .dev.vars token instead of OIDC
+curl -X DELETE https://blog.sheechan.etak64n.dev/api/articles/<slug> \
+  -H "Authorization: Bearer <token>"
+```
+
+Backups: the watcher side (`sheechan-reporter/articles/`) keeps a JSON archive of
+every published article; the whole blog can be restored by re-POSTing them.
