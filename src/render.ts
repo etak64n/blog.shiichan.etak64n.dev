@@ -562,7 +562,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .hot-item:first-child { border-top: none; }
 .hot-item a {
   display: flex; flex-direction: column; gap: 7px; align-items: flex-start;
-  padding: 13px 0; text-decoration: none; color: var(--heading);
+  min-width: 0; padding: 13px 0; text-decoration: none; color: var(--heading);
 }
 .hot-cat {
   display: inline-flex; align-items: center; gap: .45em;
@@ -571,8 +571,9 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 .hot-cat i { width: 7px; height: 7px; flex: none; background: var(--src-color, var(--accent)); }
 .hot-title {
+  max-width: 100%; min-width: 0;
   font-family: var(--display); font-weight: 700; font-size: .92rem; line-height: 1.4;
-  word-break: auto-phrase; transition: color .15s ease;
+  word-break: auto-phrase; overflow-wrap: anywhere; transition: color .15s ease;
 }
 .hot-item a:hover .hot-title { color: var(--primary); }
 .hot-meta {
