@@ -54,7 +54,7 @@ export function parseTags(json: string): string[] {
   }
 }
 
-// Brand accent per source; falls back to the site cyan for unknown sources
+// Bright brand color for the small source dot on the article page
 function sourceColor(name: string): string {
   const n = name.toLowerCase()
   if (n.includes('aws') || n.includes('amazon')) return '#ff9900'
@@ -62,7 +62,19 @@ function sourceColor(name: string): string {
   if (n.includes('openai')) return '#4ecb9b'
   if (n.includes('anthropic')) return '#d97757'
   if (n.includes('windows') || n.includes('microsoft')) return '#4cc2ff'
-  return '#3fd2ff'
+  return '#60B5FA'
+}
+
+// AA-corrected brand color used for genre tags and thumbnail washes. Mid-tone
+// so it reads on light surfaces; dark mode lightens it via CSS color-mix.
+function sourceBrand(name: string): string {
+  const n = name.toLowerCase()
+  if (n.includes('aws') || n.includes('amazon')) return '#C77A00'
+  if (n.includes('cloudflare')) return '#C25E12'
+  if (n.includes('openai')) return '#1A9C78'
+  if (n.includes('anthropic')) return '#B4653F'
+  if (n.includes('windows') || n.includes('microsoft')) return '#2B7DC4'
+  return '#2E6FD0'
 }
 
 // Lucide-style inline SVG icons (24x24 stroke), rendered at 14px via CSS
@@ -277,50 +289,66 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 .section-title:first-child { margin-top: 0; }
 
-/* ---- cards ---- */
+/* ---- cards (thumbnail + genre tag + title + meta, per design-system) ---- */
 .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(265px, 1fr)); gap: 18px; }
 .card {
-  position: relative; display: flex; flex-direction: column; gap: .55em;
+  position: relative; display: flex; flex-direction: column;
   background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
-  padding: 20px 22px; cursor: pointer; box-shadow: var(--shadow-soft);
+  overflow: hidden; cursor: pointer; box-shadow: var(--shadow-soft);
   transition: transform .15s ease, box-shadow .15s ease;
   animation: rise .5s ease backwards;
 }
 .card:hover, .card:focus-within { transform: translateY(-4px); box-shadow: var(--shadow-lift); }
-.card h2, .card h3 { margin: 0; font-family: var(--display); font-size: 1.02rem; line-height: 1.5; font-weight: 700; }
-.card h2 a, .card h3 a { color: var(--heading); text-decoration: none; transition: color .15s ease; }
-.card:hover h2 a, .card:hover h3 a { color: var(--primary); }
-.card h2 a::after, .card h3 a::after { content: ''; position: absolute; inset: 0; }
-.card .summary {
-  margin: 0; font-size: .875rem; color: var(--muted);
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+.thumb {
+  position: relative; aspect-ratio: 16 / 9; display: flex; align-items: flex-end;
+  background: linear-gradient(140deg, var(--thumb-a, var(--sky)), var(--thumb-b, var(--aqua)));
 }
+.thumb .wave { width: 100%; height: 26px; display: block; color: rgba(255, 255, 255, .9); }
+.thumb .latest-label {
+  position: absolute; top: 12px; left: 12px;
+  font-family: var(--mono); font-size: .64rem; font-weight: 700; letter-spacing: .14em;
+  color: var(--on-primary); background: var(--primary); border-radius: 999px; padding: .25em 1em;
+}
+.card-body { display: flex; flex-direction: column; gap: .5em; padding: 14px 18px 18px; }
+.card-body h2, .card-body h3 {
+  margin: 0; font-family: var(--display); font-size: 1.05rem; line-height: 1.5; font-weight: 700;
+}
+.card-body h2 a, .card-body h3 a { color: var(--heading); text-decoration: none; transition: color .15s ease; }
+.card:hover .card-body h2 a, .card:hover .card-body h3 a { color: var(--primary); }
+.card-body h2 a::after, .card-body h3 a::after { content: ''; position: absolute; inset: 0; }
+.card-meta { font-family: var(--mono); font-size: .72rem; color: var(--muted); }
+.card .summary {
+  margin: 0; font-size: .86rem; color: var(--muted);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.genre-tag {
+  align-self: flex-start; font-family: var(--mono); font-size: .72rem; font-weight: 600;
+  color: var(--brand, var(--primary));
+  background: color-mix(in srgb, var(--brand, var(--accent)) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brand, var(--accent)) 38%, transparent);
+  border-radius: 6px; padding: .18em .7em;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .genre-tag { color: color-mix(in srgb, var(--brand, var(--accent)) 55%, #EAF3FE); }
+}
+:root[data-theme='dark'] .genre-tag { color: color-mix(in srgb, var(--brand, var(--accent)) 55%, #EAF3FE); }
 @media (min-width: 700px) {
   .card.wide { grid-column: span 2; }
-  .card.wide .summary { -webkit-line-clamp: 2; }
+  .card.wide { flex-direction: row; }
+  .card.wide .thumb { aspect-ratio: auto; width: 42%; min-height: 100%; }
+  .card.wide .card-body { flex: 1; justify-content: center; }
 }
-.card.featured {
-  border-color: var(--line-strong);
-  background: linear-gradient(150deg, color-mix(in srgb, var(--sky) 30%, var(--surface)), var(--surface) 60%);
-  padding: 26px 28px;
+.card.featured { grid-column: 1 / -1; }
+@media (min-width: 640px) {
+  .card.featured { flex-direction: row; }
+  .card.featured .thumb { aspect-ratio: auto; width: 46%; }
+  .card.featured .card-body { flex: 1; justify-content: center; padding: 26px 30px; }
 }
-.card.featured h2 { font-size: 1.35rem; }
-.card.featured .summary { -webkit-line-clamp: unset; font-size: .92rem; }
-.featured .corner { position: absolute; width: 13px; height: 13px; border: 2px solid var(--accent); opacity: .7; }
-.featured .corner.tl { top: 11px; left: 11px; border-right: none; border-bottom: none; border-top-left-radius: 4px; }
-.featured .corner.br { bottom: 11px; right: 11px; border-left: none; border-top: none; border-bottom-right-radius: 4px; }
-.latest-label {
-  align-self: flex-start; font-family: var(--mono); font-size: .66rem; font-weight: 700;
-  letter-spacing: .14em; color: var(--on-primary); background: var(--primary);
-  border-radius: 999px; padding: .2em .9em;
-}
-.meta {
-  display: flex; flex-wrap: wrap; align-items: center; gap: .4em 1em;
-  font-family: var(--mono); font-size: .72rem; color: var(--muted);
-}
-.src { display: inline-flex; align-items: center; gap: .5em; }
-.src i { width: 8px; height: 8px; border-radius: 999px; flex: none; background: var(--src-color, var(--accent)); }
-.tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+.card.featured .thumb .wave { height: 30px; }
+.card.featured .card-body h2 { font-size: 1.4rem; }
+.card.featured .summary { -webkit-line-clamp: 3; font-size: .92rem; }
+/* ---- tags (chips) ---- */
+.tag-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .tag {
   position: relative; z-index: 2;
   font-family: var(--mono); font-size: .72rem; font-weight: 600;
@@ -332,6 +360,12 @@ button { -webkit-tap-highlight-color: transparent; }
 .tag.big { font-size: .82rem; padding: .3em 1em; }
 .tag .n { color: var(--muted); margin-left: .5em; }
 .tag-cloud { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .4em 1em;
+  font-family: var(--mono); font-size: .72rem; color: var(--muted);
+}
+.src { display: inline-flex; align-items: center; gap: .5em; }
+.src i { width: 8px; height: 8px; border-radius: 999px; flex: none; background: var(--src-color, var(--accent)); }
 .card mark { background: var(--sel); color: inherit; border-radius: 3px; padding: 0 .12em; }
 
 /* ---- sidebar ---- */
@@ -681,27 +715,38 @@ function sourceList(sources: SourceCount[]): string {
   </ul>`
 }
 
+// Thumbnail wave line (echoes the aquarius motif), white over the gradient
+const THUMB_WAVE = `<svg class="wave" viewBox="0 0 480 26" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14 Q 20 4 40 14 T 80 14 T 120 14 T 160 14 T 200 14 T 240 14 T 280 14 T 320 14 T 360 14 T 400 14 T 440 14 T 480 14" fill="none" stroke="currentColor" stroke-width="3"/></svg>`
+
 function articleCard(
   r: ArticleListRow,
   index: number,
   opts: { featured?: boolean; wide?: boolean; summaryHtml?: string } = {},
 ): string {
   const { featured = false, wide = false, summaryHtml } = opts
-  const tags = parseTags(r.tags)
-  const chips = tags
-    .slice(0, featured || wide ? 8 : 4)
-    .map((t) => tagChip(t))
-    .join('')
   const delay = Math.min(index * 45, 500)
   const heading = featured ? 'h2' : 'h3'
   const classes = ['card', featured && 'featured', wide && 'wide'].filter(Boolean).join(' ')
+  const brand = sourceBrand(r.source_name)
+  // Thumbnail wash: blue-family gradient (per design system) with only a faint
+  // brand tint so each source is subtly recognizable without going muddy
+  const thumbStyle = `--brand:${brand};--thumb-a:color-mix(in srgb, ${brand} 12%, #DCEBFA);--thumb-b:color-mix(in srgb, ${brand} 20%, var(--aqua))`
+  const showSummary = featured || summaryHtml !== undefined
+  const summary = showSummary
+    ? `<p class="summary">${summaryHtml ?? esc(r.summary)}</p>`
+    : ''
   return `
 <article class="${classes}" style="animation-delay:${delay}ms">
-  ${featured ? '<span class="corner tl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span><span class="latest-label">LATEST</span>' : ''}
-  <${heading}><a href="/posts/${esc(r.slug)}">${esc(r.title)}</a></${heading}>
-  <p class="meta">${sourceBadge(r.source_name)}<span>${esc(fmtDate(r.published_at))}</span></p>
-  <p class="summary">${summaryHtml ?? esc(r.summary)}</p>
-  ${chips ? `<p class="tag-row">${chips}</p>` : ''}
+  <div class="thumb" style="${thumbStyle}" aria-hidden="true">
+    ${featured ? '<span class="latest-label">LATEST</span>' : ''}
+    ${THUMB_WAVE}
+  </div>
+  <div class="card-body">
+    <span class="genre-tag" style="--brand:${brand}">${esc(r.source_name)}</span>
+    <${heading}><a href="/posts/${esc(r.slug)}">${esc(r.title)}</a></${heading}>
+    <p class="card-meta">${esc(fmtDate(r.published_at))}</p>
+    ${summary}
+  </div>
 </article>`
 }
 
