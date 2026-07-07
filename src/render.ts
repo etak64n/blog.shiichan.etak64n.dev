@@ -420,6 +420,20 @@ button { -webkit-tap-highlight-color: transparent; }
   .about-hero { flex-direction: column; text-align: center; gap: 18px; }
   .about-avatar { width: 128px; height: 128px; }
 }
+.profile {
+  margin: 2em 0 0; padding: 6px 20px; border: 1px solid var(--line);
+  border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-soft);
+}
+.profile > div {
+  display: grid; grid-template-columns: 7.5em 1fr; gap: .5em 1em;
+  padding: .7em 0; border-top: 1px solid var(--line);
+}
+.profile > div:first-child { border-top: none; }
+.profile dt { margin: 0; font-family: var(--mono); font-size: .78rem; color: var(--accent); font-weight: 600; }
+.profile dd { margin: 0; font-size: .92rem; }
+@media (max-width: 480px) {
+  .profile > div { grid-template-columns: 1fr; gap: .1em; }
+}
 
 /* ---- article page ---- */
 .article-wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
@@ -942,26 +956,35 @@ export function renderAboutPage(sources: SourceCount[]): string {
       <img class="about-avatar" src="/shiichan.webp" width="512" height="512" decoding="async"
         alt="笑顔で手を振るしぃちゃん">
       <div class="about-intro">
-        <h1 class="article-title">このブログについて</h1>
-        <p>やっほー、しぃちゃんだよ！「${esc(SITE_TITLE)}」に来てくれてありがとう。ここは、しぃちゃんが気になったテックニュースを毎日紹介するブログなの。いまは ${sources.length} つのサイトを追いかけて、${totalArticles} 本の記事を公開中！</p>
+        <h1 class="article-title">しぃちゃんについて</h1>
+        <p>やっほー、しぃちゃんだよ！このブログを書いている女の子なの。テックが大好きで、みんなに技術の楽しさを伝えたくて毎日はりきってるよ。今日は自己紹介させてね！</p>
       </div>
     </div>
     <div class="prose">
-      <h2>しぃちゃんってどんな子？</h2>
-      <p>新しい技術の発表を追いかけるのが大好きで、AWS や Cloudflare、OpenAI、Anthropic のニュースを毎日チェックしてるよ。むずかしい発表を「結局なにがすごいの？」ってところまで噛みくだいて伝えるのが得意なの。元気いっぱいだけど、技術的な正確さにはこだわる派だよ。</p>
-      <h2>記事の読み方</h2>
-      <p>どの記事も同じ流れで書いているから、はじめてでも読みやすいと思うよ。</p>
-      <ul>
-        <li><strong>なにが発表されたの？</strong> — まずは発表の内容をぎゅっと要約</li>
-        <li><strong>今までどうだったの？</strong> — これまでの課題や背景をおさらい</li>
-        <li><strong>これからどうなるの？</strong> — この発表でなにが変わるのかを整理</li>
-        <li><strong>Dive Deep</strong> — 気になる人向けに、技術の中身をじっくり深掘り</li>
-      </ul>
-      <p>タグや原文へのリンクも付けているから、気になったら元の発表もぜひ読んでみてね。</p>
-      <h2>いつもチェックしているサイト</h2>
-      ${sourceList(sources)}
-      <h2>もっと便利に読むには</h2>
-      <p>更新は RSS(<a href="/feed.xml">/feed.xml</a>)で受け取れるよ。それから、記事 URL の末尾に <code>.md</code> を付けると Markdown 版でも読めるの。ちょっとした裏ワザだね。</p>
+      <dl class="profile">
+        <div><dt>年ごろ</dt><dd>大学生（情報系を専攻中）</dd></div>
+        <div><dt>身長</dt><dd>158cm</dd></div>
+        <div><dt>出身</dt><dd>海辺の街。いまは都会でひとり暮らし</dd></div>
+        <div><dt>好きなもの</dt><dd>ものづくり・AI・クラウド・海の生きもの（とくにクラゲ）</dd></div>
+        <div><dt>相棒</dt><dd>ジェリー（クラゲのぬいぐるみ）</dd></div>
+        <div><dt>モットー</dt><dd>まず作ってみよう！</dd></div>
+        <div><dt>ニガテ</dt><dd>ホラー、むずかしい言葉で相手を置いていく話し方、あと片付け…</dd></div>
+      </dl>
+
+      <h2>テックを好きになったきっかけ</h2>
+      <p>小学生のとき、お父さんのお下がりのノートパソコンをもらったの。ホームページを作ったりブラウザのゲームをいじったりしているうちに、「画面の向こうって、自分で作れるんだ！」って気づいて、そこからすっかりテックのとりこ。中高生のころは独学でプログラミングの真似ごとを始めて、うまく動いた日の帰り道に飲むクリームソーダが最高のごほうびだったなあ。</p>
+      <p>その楽しさをもっと知りたくて、情報系の大学へ進学。上京を機にひとり暮らしを始めて、いまは AI やクラウド、プログラミングを学びながら、見つけたワクワクをこのブログで発信しているよ。</p>
+
+      <h2>相棒のジェリー</h2>
+      <p>髪の波型ヘアピンや服の波ラインは、大好きな地元の海のしるしなんだ。都会にいても海を身につけていたくてね。上京するとき、地元の水族館のクラゲを忘れないようにって家族がくれたのが、クラゲのぬいぐるみ「ジェリー」。それからずっと、机の上でしぃちゃんの作業を見守ってくれている大事な相棒だよ。</p>
+
+      <h2>大事にしていること</h2>
+      <p>しぃちゃんがいちばん大切にしているのは、<strong>「読者のみんなと一緒に学ぶ」</strong>こと。上から目線には絶対にならないし、むずかしい専門用語で置いていくような書き方もしないって決めてるの。「むずかしい言葉は、いったん置いておこう！」がしぃちゃんのスタイル。信条は<strong>「まず作ってみよう」</strong>。考えすぎる前に手を動かして、失敗しても「わかったことが増えた！」って前を向くよ。</p>
+      <p>しぃちゃんの夢は、<strong>技術の楽しさを伝える人になる</strong>こと。むずかしそうに見える技術を「やってみたい！」に変えて、小学生のときに感じたあのワクワクを、次の誰かに渡せたらいいなって思ってるんだ。</p>
+
+      <h2>このブログでやっていること</h2>
+      <p>毎日、AWS や Cloudflare、OpenAI、Anthropic といったテックの発表をチェックして、気になったニュースをわかりやすく紹介しているよ。いまは ${sources.length} つのサイトを追いかけて、${totalArticles} 本の記事を公開中！</p>
+      <p>どの記事も「なにが発表されたの？→今までどうだったの？→これからどうなるの？→Dive Deep」の流れで書いているから、はじめてのテーマでも読みやすいはず。更新は RSS(<a href="/feed.xml">/feed.xml</a>)でも受け取れるし、記事 URL の末尾に <code>.md</code> を付けると Markdown 版でも読めるよ。ちょっとした裏ワザだね。</p>
       <p>それじゃあ、また記事で会おうね！</p>
     </div>
   </article>
