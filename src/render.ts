@@ -380,6 +380,24 @@ button { -webkit-tap-highlight-color: transparent; }
 .src-list { list-style: none; margin: 0; padding: 0; font-size: .82rem; }
 .src-list li { display: flex; align-items: center; gap: .6em; padding: .3em 0; color: var(--text); }
 .src-list .n { margin-left: auto; font-family: var(--mono); font-size: .72rem; color: var(--dim); }
+.pop-list { list-style: none; margin: 0; padding: 0; }
+.pop-list li {
+  display: grid; grid-template-columns: auto 1fr; align-items: baseline;
+  column-gap: .7em; row-gap: .2em; padding: .55em 0;
+  border-top: 1px solid var(--line);
+}
+.pop-list li:first-child { border-top: none; padding-top: 0; }
+.pop-list .rank {
+  grid-row: span 2; align-self: center;
+  font-family: var(--display); font-weight: 700; font-size: 1rem;
+  color: var(--cyan); width: 1.1em; text-align: center;
+}
+.pop-list a { color: var(--text); text-decoration: none; font-size: .86rem; line-height: 1.5; }
+.pop-list a:hover { color: var(--cyan); }
+.pop-list .pop-meta { font-family: var(--mono); font-size: .68rem; color: var(--dim); }
+.pop-week { font-family: var(--mono); font-weight: 400; font-size: .6rem; letter-spacing: .1em; opacity: .8; }
+.more-row { margin-top: 22px; }
+.more-row .panel-more { font-size: .78rem; }
 .about-text { margin: 0; font-size: .82rem; color: var(--dim); }
 .about-text b { color: var(--cyan-soft); font-weight: 600; }
 
@@ -657,7 +675,7 @@ ${opts.head ?? ''}
   <div class="wrap">
     <a class="logo" href="/">shiichan<span class="dot">.</span>blog<span class="cursor" aria-hidden="true">▍</span></a>
     <nav class="site-nav">
-      ${navLink('/', 'Posts', 'posts', opts.nav)}
+      ${navLink('/posts', 'Posts', 'posts', opts.nav)}
       ${navLink('/tags', 'Tags', 'tags', opts.nav)}
       ${navLink('/about', 'About', 'about', opts.nav)}
       <form class="header-search" action="/search" method="get" target="_blank" rel="noopener" role="search">
@@ -729,13 +747,37 @@ function snippetHtml(snip: string): string {
   return esc(snip).replaceAll(SNIP_OPEN, '<mark>').replaceAll(SNIP_CLOSE, '</mark>')
 }
 
-export function renderIndexPage(
-  rows: ArticleListRow[],
-  tags: TagCount[],
-  sources: SourceCount[],
-  months: MonthCount[],
-): string {
-  const totalArticles = sources.reduce((sum, s) => sum + s.count, 0)
+function popularPanel(popular: ArticleListRow[]): string {
+  if (popular.length === 0) return ''
+  const items = popular
+    .map(
+      (r, i) => `<li>
+      <span class="rank">${i + 1}</span>
+      <a href="/posts/${esc(r.slug)}">${esc(r.title)}</a>
+      <span class="pop-meta">${sourceBadge(r.source_name)}</span>
+    </li>`,
+    )
+    .join('\n    ')
+  return `
+<div class="panel" style="animation-delay:80ms">
+  <h2 class="section-title">Popular <span class="pop-week">this week</span></h2>
+  <ol class="pop-list">
+    ${items}
+  </ol>
+</div>`
+}
+
+type IndexData = {
+  latest: ArticleListRow[]
+  popular: ArticleListRow[]
+  tags: TagCount[]
+  sources: SourceCount[]
+  months: MonthCount[]
+  total: number
+}
+
+export function renderIndexPage(data: IndexData): string {
+  const { latest: rows, popular, tags, sources, months, total } = data
   const [latest, ...rest] = rows
 
   const hero = `
@@ -744,7 +786,7 @@ export function renderIndexPage(
   <h1>Shiichan<br>Tech Report</h1>
   <p class="lede">${esc(SITE_DESCRIPTION)}だよ。むずかしいニュースも、しぃちゃんと一緒ならこわくない！</p>
   <div class="stats">
-    <span class="stat">ARTICLES<b>${totalArticles}</b></span>
+    <span class="stat">ARTICLES<b>${total}</b></span>
     <span class="stat">SOURCES<b>${sources.length}</b></span>
     <span class="stat">UPDATE<b>DAILY</b></span>
   </div>
@@ -757,13 +799,15 @@ export function renderIndexPage(
 ${articleCard(latest, 0, { featured: true })}
 ${
   rest.length
-    ? `<h2 class="section-title">All Posts</h2>
-<div class="card-grid">${rest.map((r, i) => articleCard(r, i + 1, { wide: i % 5 === 3 })).join('\n')}</div>`
+    ? `<h2 class="section-title">Latest ${rows.length} Posts</h2>
+<div class="card-grid">${rest.map((r, i) => articleCard(r, i + 1, { wide: i % 5 === 3 })).join('\n')}</div>
+<p class="more-row"><a class="panel-more" href="/posts">全ての記事を見る ${icon('arrow-up-right')}</a></p>`
     : ''
 }`
     : '<p>まだ記事がありません。</p>'
 
   const sideCol = `
+${popularPanel(popular)}
 <div class="panel" id="tags" style="animation-delay:120ms">
   <h2 class="section-title">Tags</h2>
   <p class="tag-row">${tags.map((t) => tagChip(t.tag, t.count)).join('')}</p>
@@ -793,8 +837,28 @@ ${
 </div>`
 
   return layout(
-    { title: SITE_TITLE, canonicalPath: '/', nav: 'posts' },
+    { title: SITE_TITLE, canonicalPath: '/' },
     `${hero}\n<div class="cols wrap"><main id="main">${mainCol}</main><aside>${sideCol}</aside></div>`,
+  )
+}
+
+export function renderAllPostsPage(rows: ArticleListRow[], total: number): string {
+  const main = `
+<section class="page-head wrap">
+  <h1>ALL POSTS</h1>
+  <p class="count">${total} POST${total === 1 ? '' : 'S'}</p>
+</section>
+<section class="list-section wrap" id="main">
+  <div class="card-grid">${rows.map((r, i) => articleCard(r, i)).join('\n')}</div>
+</section>`
+  return layout(
+    {
+      title: `Posts | ${SITE_TITLE}`,
+      description: `${SITE_TITLE} の全記事一覧`,
+      canonicalPath: '/posts',
+      nav: 'posts',
+    },
+    main,
   )
 }
 

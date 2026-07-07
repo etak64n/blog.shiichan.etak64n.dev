@@ -32,6 +32,42 @@ export async function listArticles(db: D1Database, limit = 100): Promise<Article
   return results
 }
 
+export async function countArticles(db: D1Database): Promise<number> {
+  const row = await db.prepare('SELECT COUNT(*) AS n FROM articles').first<{ n: number }>()
+  return row?.n ?? 0
+}
+
+// Record one view in today's bucket. Fire-and-forget from the request handler.
+export async function recordView(db: D1Database, slug: string): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO article_views (slug, day, count) VALUES (?1, date('now'), 1)
+       ON CONFLICT (slug, day) DO UPDATE SET count = count + 1`,
+    )
+    .bind(slug)
+    .run()
+}
+
+// Most-viewed articles over the trailing 7 days (today + previous 6). Excludes
+// articles that no longer exist via the join.
+export async function listPopular(db: D1Database, limit = 5): Promise<ArticleListRow[]> {
+  const cols = LIST_COLUMNS.split(', ')
+    .map((c) => `a.${c}`)
+    .join(', ')
+  const { results } = await db
+    .prepare(
+      `SELECT ${cols}
+       FROM article_views v JOIN articles a ON a.slug = v.slug
+       WHERE v.day >= date('now', '-6 days')
+       GROUP BY a.slug
+       ORDER BY SUM(v.count) DESC, a.published_at DESC
+       LIMIT ?1`,
+    )
+    .bind(limit)
+    .all<ArticleListRow>()
+  return results
+}
+
 export async function listArticlesByTag(
   db: D1Database,
   tag: string,
@@ -194,5 +230,6 @@ export async function upsertArticle(db: D1Database, a: Article): Promise<void> {
 
 export async function deleteArticle(db: D1Database, slug: string): Promise<boolean> {
   const res = await db.prepare('DELETE FROM articles WHERE slug = ?').bind(slug).run()
+  await db.prepare('DELETE FROM article_views WHERE slug = ?').bind(slug).run()
   return res.meta.changes > 0
 }

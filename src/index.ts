@@ -1,20 +1,24 @@
 import { Hono } from 'hono'
 import { verifyIngestAuth } from './auth'
 import {
+  countArticles,
   deleteArticle,
   getArticle,
   listArticles,
   listArticlesByMonth,
   listArticlesByTag,
   listMonths,
+  listPopular,
   listSources,
   listTags,
+  recordView,
   searchArticles,
   upsertArticle,
 } from './db'
 import {
   contentSecurityPolicy,
   renderAboutPage,
+  renderAllPostsPage,
   renderArchiveIndexPage,
   renderArchiveMonthPage,
   renderArticleMarkdown,
@@ -58,15 +62,28 @@ app.use('*', async (c, next) => {
 
 // ---- public pages ----
 
+const HOME_LATEST = 20
+
 app.get('/', async (c) => {
-  const [articles, tags, sources, months] = await Promise.all([
-    listArticles(c.env.DB),
+  const [latest, popular, tags, sources, months, total] = await Promise.all([
+    listArticles(c.env.DB, HOME_LATEST),
+    listPopular(c.env.DB, 5),
     listTags(c.env.DB),
     listSources(c.env.DB),
     listMonths(c.env.DB),
+    countArticles(c.env.DB),
   ])
   c.header('cache-control', 'public, max-age=300')
-  return c.html(renderIndexPage(articles, tags, sources, months))
+  return c.html(renderIndexPage({ latest, popular, tags, sources, months, total }))
+})
+
+app.get('/posts', async (c) => {
+  const [articles, total] = await Promise.all([
+    listArticles(c.env.DB, 1000),
+    countArticles(c.env.DB),
+  ])
+  c.header('cache-control', 'public, max-age=300')
+  return c.html(renderAllPostsPage(articles, total))
 })
 
 app.get('/search', async (c) => {
@@ -105,6 +122,8 @@ app.get('/posts/:slug', async (c) => {
     c.header('content-type', 'text/markdown; charset=utf-8')
     return c.body(renderArticleMarkdown(article))
   }
+  // Tally the view without delaying the response; popularity is best-effort
+  c.executionCtx.waitUntil(recordView(c.env.DB, slug).catch(() => {}))
   return c.html(await renderArticlePage(article))
 })
 
