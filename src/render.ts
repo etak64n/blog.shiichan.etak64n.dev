@@ -86,6 +86,8 @@ const ICONS: Record<string, string> = {
   search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
   moon: '<path d="M12 3a6.364 6.364 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  menu: '<line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
 }
 
 function icon(name: keyof typeof ICONS): string {
@@ -205,11 +207,19 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 .logo .wave-mark { width: 30px; height: 18px; color: var(--accent); flex: none; }
 .logo .dot { color: var(--accent); }
+.nav-right { display: flex; align-items: center; gap: .4em; }
+.nav-controls { display: flex; align-items: center; gap: .1em; }
 .site-nav { display: flex; align-items: center; gap: .3em; font-family: var(--sans); font-size: .9rem; }
 .site-nav a { color: var(--muted); text-decoration: none; font-weight: 500; }
 .site-nav a.textlink { padding: .6em .7em; border-radius: 8px; transition: color .15s ease, background .15s ease; }
 .site-nav a.textlink:hover { color: var(--primary); background: var(--tag-bg); }
 .site-nav a.active { color: var(--primary); }
+.menu-only { display: none; }
+.nav-controls .menu-toggle { display: none; }
+.menu-toggle .i-menu { display: inline-flex; line-height: 0; }
+.menu-toggle .i-close { display: none; line-height: 0; }
+.menu-toggle[aria-expanded='true'] .i-menu { display: none; }
+.menu-toggle[aria-expanded='true'] .i-close { display: inline-flex; }
 .nav-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 38px; height: 38px; border-radius: 10px; flex: none;
@@ -540,21 +550,30 @@ button { -webkit-tap-highlight-color: transparent; }
 .jelly { display: inline-block; animation: bob 3.5s ease-in-out infinite; }
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 
-/* ---- small screens ---- */
+/* ---- mobile: collapse nav into a hamburger dropdown ---- */
 @media (max-width: 760px) {
-  .header-search { display: none; }
-  .nav-search { display: inline-flex; }
+  .nav-controls .menu-toggle { display: inline-flex; }
+  .bar-only { display: none; }
+  .menu-only { display: block; }
+  .site-nav {
+    position: absolute; top: 100%; left: 0; right: 0;
+    flex-direction: column; align-items: stretch; gap: 0;
+    background: var(--surface); border-bottom: 1px solid var(--line);
+    box-shadow: var(--shadow-lift); padding: 6px 0;
+    max-height: calc(100dvh - 60px); overflow-y: auto;
+    display: none;
+  }
+  .site-nav.open { display: flex; animation: rise .2s ease; }
+  .site-nav a.textlink {
+    padding: .95em 24px; border-radius: 0; width: 100%; font-size: 1rem;
+  }
+  .site-nav a.textlink:hover, .site-nav a.active { background: var(--tag-bg); }
 }
 @media (max-width: 560px) {
   .logo { font-size: .95rem; gap: .4em; }
   .logo .wave-mark { width: 24px; }
   .logo-suffix { display: none; }
-  .site-nav { gap: 0; font-size: .8rem; }
-  .site-nav a.textlink { padding: .6em .38em; }
-  .nav-icon { width: 32px; height: 32px; }
-}
-@media (max-width: 480px) {
-  .nav-rss { display: none; }
+  .nav-icon { width: 34px; height: 34px; }
 }
 
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
@@ -587,6 +606,24 @@ const THEME_TOGGLE_SCRIPT = `
     var next = current === 'light' ? 'dark' : 'light';
     root.dataset.theme = next;
     try { localStorage.setItem('theme', next); } catch (e) {}
+  });
+})();
+(function () {
+  var btn = document.getElementById('menu-toggle');
+  var nav = document.getElementById('site-nav');
+  if (!btn || !nav) return;
+  function setOpen(open) {
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    nav.classList.toggle('open', open);
+  }
+  btn.addEventListener('click', function () {
+    setOpen(btn.getAttribute('aria-expanded') !== 'true');
+  });
+  nav.addEventListener('click', function (e) {
+    if (e.target.closest('a')) setOpen(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') setOpen(false);
   });
 })();
 (function () {
@@ -681,21 +718,29 @@ ${opts.head ?? ''}
 <header class="site-header">
   <div class="wrap">
     <a class="logo" href="/">${WAVE_MARK}shiichan<span class="logo-suffix"><span class="dot">.</span>blog</span></a>
-    <nav class="site-nav">
-      ${navLink('/posts', 'Posts', 'posts', opts.nav)}
-      ${navLink('/tags', 'Tags', 'tags', opts.nav)}
-      ${navLink('/about', 'About', 'about', opts.nav)}
-      <form class="header-search" action="/search" method="get" target="_blank" rel="noopener" role="search">
-        ${icon('search')}
-        <input class="hs-input" type="search" name="q" placeholder="Search" aria-label="記事を検索" maxlength="100">
-        <kbd class="hs-kbd" aria-hidden="true">⌘K</kbd>
-      </form>
-      <a class="nav-icon nav-search" href="/search" aria-label="記事を検索">${icon('search')}</a>
-      <a class="nav-icon nav-rss" href="/feed.xml" aria-label="RSS フィード">${icon('rss')}</a>
-      <button class="nav-icon theme-toggle" id="theme-toggle" type="button" aria-label="ライト/ダークテーマ切り替え">
-        <span class="sun">${icon('sun')}</span><span class="moon">${icon('moon')}</span>
-      </button>
-    </nav>
+    <div class="nav-right">
+      <nav class="site-nav" id="site-nav" aria-label="サイトナビゲーション">
+        ${navLink('/posts', 'Posts', 'posts', opts.nav)}
+        ${navLink('/tags', 'Tags', 'tags', opts.nav)}
+        ${navLink('/about', 'About', 'about', opts.nav)}
+        <a class="textlink menu-only" href="/search">Search</a>
+        <a class="textlink menu-only" href="/feed.xml">RSS</a>
+        <form class="header-search bar-only" action="/search" method="get" target="_blank" rel="noopener" role="search">
+          ${icon('search')}
+          <input class="hs-input" type="search" name="q" placeholder="Search" aria-label="記事を検索" maxlength="100">
+          <kbd class="hs-kbd" aria-hidden="true">⌘K</kbd>
+        </form>
+        <a class="nav-icon nav-rss bar-only" href="/feed.xml" aria-label="RSS フィード">${icon('rss')}</a>
+      </nav>
+      <div class="nav-controls">
+        <button class="nav-icon theme-toggle" id="theme-toggle" type="button" aria-label="ライト/ダークテーマ切り替え">
+          <span class="sun">${icon('sun')}</span><span class="moon">${icon('moon')}</span>
+        </button>
+        <button class="nav-icon menu-toggle" id="menu-toggle" type="button" aria-label="メニュー" aria-controls="site-nav" aria-expanded="false">
+          <span class="i-menu">${icon('menu')}</span><span class="i-close">${icon('x')}</span>
+        </button>
+      </div>
+    </div>
   </div>
 </header>
 ${main}
