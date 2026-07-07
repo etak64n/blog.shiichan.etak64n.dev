@@ -23,6 +23,12 @@ marked.use({
     image({ href, title, text }) {
       return `<img src="${attr(safeUrl(href))}" alt="${attr(text)}"${title ? ` title="${attr(title)}"` : ''}>`
     },
+    // id comes from a per-article lexer pass (see renderArticlePage) so headings
+    // can be linked from the table of contents
+    heading({ tokens, depth, id }: { tokens: unknown[]; depth: number; id?: string }) {
+      const text = this.parser.parseInline(tokens as never)
+      return `<h${depth}${id ? ` id="${attr(id)}"` : ''}>${text}</h${depth}>\n`
+    },
   },
 })
 
@@ -102,6 +108,7 @@ type Strings = {
   rssDesc: string
   prev: string
   next: string
+  toc: string
 }
 
 const T: Record<Lang, Strings> = {
@@ -143,6 +150,7 @@ const T: Record<Lang, Strings> = {
     rssDesc: SITE_DESCRIPTION,
     prev: '前へ',
     next: '次へ',
+    toc: '目次',
   },
   en: {
     htmlLang: 'en',
@@ -182,6 +190,7 @@ const T: Record<Lang, Strings> = {
     rssDesc: SITE_DESCRIPTION_EN,
     prev: 'Prev',
     next: 'Next',
+    toc: 'Contents',
   },
 }
 
@@ -617,7 +626,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .article-meta {
   display: flex; flex-wrap: wrap; align-items: center; gap: .6em 1.2em;
   border: 1px solid var(--line); border-radius: 14px; background: var(--surface);
-  padding: .8em 1.3em; margin-bottom: 2.4em; box-shadow: var(--shadow-soft);
+  padding: .8em 1.3em; margin-bottom: 1.1em; box-shadow: var(--shadow-soft);
 }
 .article-meta .spacer { flex: 1; }
 .mdlink {
@@ -632,13 +641,53 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 .srclink:hover { color: var(--primary); }
 
+/* ---- article: ToC sidebar + hero + tags ---- */
+.article-layout { max-width: 1140px; margin: 0 auto; padding: 40px 20px 80px; }
+.article-layout.has-toc {
+  display: grid; grid-template-columns: 210px minmax(0, 760px);
+  gap: 44px; justify-content: center; align-items: start;
+}
+.article-main { min-width: 0; }
+.article-layout:not(.has-toc) .article-main { max-width: 760px; margin: 0 auto; }
+.toc { position: sticky; top: 76px; align-self: start; }
+.toc-title {
+  font-family: var(--display); font-weight: 700; font-size: .82rem;
+  color: var(--heading); margin: 0 0 .6em; letter-spacing: .04em;
+}
+.toc ul { list-style: none; margin: 0; padding: 0; }
+.toc a {
+  display: block; color: var(--muted); text-decoration: none;
+  font-size: .85rem; line-height: 1.5; padding: .35em 0 .35em .9em;
+  border-left: 2px solid var(--line); transition: color .15s ease, border-color .15s ease;
+}
+.toc a:hover { color: var(--primary); }
+.toc a.active { color: var(--primary); border-left-color: var(--primary); font-weight: 600; }
+.toc-h3 a { padding-left: 1.7em; font-size: .8rem; }
+.article-hero {
+  position: relative; aspect-ratio: 1200 / 420; display: flex; align-items: flex-end;
+  border-radius: 16px; overflow: hidden; margin-bottom: 22px; box-shadow: var(--shadow-soft);
+  background: linear-gradient(140deg, var(--thumb-a, var(--sky)), var(--thumb-b, var(--aqua)));
+}
+.article-hero .wave { width: 100%; height: 30px; display: block; color: rgba(255, 255, 255, .9); }
+.article-hero-src {
+  position: absolute; top: 14px; left: 16px;
+  font-family: var(--mono); font-size: .72rem; font-weight: 700; color: var(--brand, var(--primary));
+  background: rgba(255, 255, 255, .88); border-radius: 999px; padding: .25em .9em;
+}
+.article-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 2.4em; }
+@media (max-width: 960px) {
+  .article-layout.has-toc { display: block; }
+  .toc { display: none; }
+  .article-main { max-width: 760px; margin: 0 auto; }
+}
+
 .prose { font-size: 1rem; }
 .prose h2 {
   font-family: var(--display); font-weight: 700; color: var(--heading);
   font-size: 1.3rem; line-height: 1.5; margin: 2.4em 0 .8em; padding-bottom: .4em;
-  border-bottom: 2px solid var(--line);
+  border-bottom: 2px solid var(--line); scroll-margin-top: 76px;
 }
-.prose h3 { font-family: var(--display); font-weight: 700; color: var(--heading); font-size: 1.1rem; margin: 2em 0 .7em; }
+.prose h3 { font-family: var(--display); font-weight: 700; color: var(--heading); font-size: 1.1rem; margin: 2em 0 .7em; scroll-margin-top: 76px; }
 .prose p { margin: 1.1em 0; }
 .prose strong { color: var(--heading); font-weight: 700; }
 .prose a { color: var(--primary); text-underline-offset: 3px; text-decoration-color: var(--accent); }
@@ -806,6 +855,29 @@ const THEME_TOGGLE_SCRIPT = `
       else { location.href = '/search'; }
     }
   });
+})();
+(function () {
+  var links = document.querySelectorAll('.toc a[data-toc]');
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var byId = {};
+  var heads = [];
+  links.forEach(function (a) {
+    var id = a.getAttribute('data-toc');
+    byId[id] = a;
+    var el = document.getElementById(id);
+    if (el) heads.push(el);
+  });
+  var current = null;
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) {
+        if (current) current.classList.remove('active');
+        current = byId[e.target.id];
+        if (current) current.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-80px 0px -72% 0px', threshold: 0 });
+  heads.forEach(function (h) { obs.observe(h); });
 })();
 `
 
@@ -1315,22 +1387,61 @@ export async function renderArticlePage(row: ArticleRow, lang: Lang): Promise<st
   const t = T[lang]
   const base = basePath(lang)
   const title = artTitle(row, lang)
-  // body_md was validated HTML-free at ingest, so the only HTML here comes from marked
-  const bodyHtml = await marked.parse(artBody(row, lang))
   const tags = parseTags(row.tags)
   const mdPath = `${base}/posts/${row.slug}.md`
+
+  // Tokenize first so we can assign heading ids and build a table of contents,
+  // then render (body_md was validated HTML-free at ingest)
+  const tokens = marked.lexer(artBody(row, lang))
+  const toc: { depth: number; id: string; text: string }[] = []
+  let hi = 0
+  for (const tok of tokens) {
+    const tk = tok as { type?: string; depth?: number; text?: string; id?: string }
+    if (tk.type === 'heading' && (tk.depth === 2 || tk.depth === 3)) {
+      tk.id = `sec-${hi++}`
+      toc.push({ depth: tk.depth, id: tk.id, text: tk.text ?? '' })
+    }
+  }
+  const bodyHtml = marked.parser(tokens)
+
+  const brand = sourceBrand(row.source_name)
+  const heroStyle = `--brand:${brand};--thumb-a:color-mix(in srgb, ${brand} 12%, #DCEBFA);--thumb-b:color-mix(in srgb, ${brand} 20%, var(--aqua))`
+
+  const tocAside =
+    toc.length >= 2
+      ? `
+<aside class="toc" aria-label="${esc(t.toc)}">
+  <div class="toc-inner">
+    <p class="toc-title">${esc(t.toc)}</p>
+    <nav><ul>
+      ${toc
+        .map(
+          (h) =>
+            `<li class="toc-h${h.depth}"><a href="#${h.id}" data-toc="${h.id}">${esc(h.text)}</a></li>`,
+        )
+        .join('\n      ')}
+    </ul></nav>
+  </div>
+</aside>`
+      : ''
+
   const main = `
-<div class="article-wrap" id="main">
-  <p><a class="backlink" href="${base}/">${icon('arrow-left')}INDEX</a></p>
-  <article>
+<div class="article-layout wrap${toc.length >= 2 ? ' has-toc' : ''}">
+  ${tocAside}
+  <article class="article-main" id="main">
+    <p><a class="backlink" href="${base}/">${icon('arrow-left')}INDEX</a></p>
+    <div class="article-hero" style="${heroStyle}" aria-hidden="true">
+      <span class="article-hero-src" style="--brand:${brand}">${esc(row.source_name)}</span>
+      ${THUMB_WAVE}
+    </div>
     <h1 class="article-title">${esc(title)}</h1>
     <div class="article-meta">
       <p class="meta" style="margin:0">${sourceBadge(row.source_name)}<span>${esc(fmtDate(row.published_at))}</span></p>
-      ${tags.map((tg) => tagChip(base, tg)).join('')}
       <span class="spacer"></span>
       <a class="srclink" href="${esc(row.source_url)}" rel="noopener">${esc(t.source)}${icon('arrow-up-right')}</a>
       <a class="mdlink" href="${esc(mdPath)}">${icon('file-code')}RAW .md</a>
     </div>
+    ${tags.length ? `<div class="article-tags">${tags.map((tg) => tagChip(base, tg)).join('')}</div>` : ''}
     <div class="prose">${bodyHtml}</div>
   </article>
 </div>`
