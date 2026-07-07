@@ -4,18 +4,24 @@ import {
   deleteArticle,
   getArticle,
   listArticles,
+  listArticlesByMonth,
   listArticlesByTag,
+  listMonths,
   listSources,
   listTags,
+  searchArticles,
   upsertArticle,
 } from './db'
 import {
   renderAboutPage,
+  renderArchiveIndexPage,
+  renderArchiveMonthPage,
   renderArticleMarkdown,
   renderArticlePage,
   renderIndexPage,
   renderNotFoundPage,
   renderRssFeed,
+  renderSearchPage,
   renderTagPage,
   renderTagsIndexPage,
 } from './render'
@@ -41,13 +47,36 @@ app.use('*', async (c, next) => {
 // ---- public pages ----
 
 app.get('/', async (c) => {
-  const [articles, tags, sources] = await Promise.all([
+  const [articles, tags, sources, months] = await Promise.all([
     listArticles(c.env.DB),
     listTags(c.env.DB),
     listSources(c.env.DB),
+    listMonths(c.env.DB),
   ])
   c.header('cache-control', 'public, max-age=300')
-  return c.html(renderIndexPage(articles, tags, sources))
+  return c.html(renderIndexPage(articles, tags, sources, months))
+})
+
+app.get('/search', async (c) => {
+  const query = (c.req.query('q') ?? '').trim().slice(0, 100)
+  const results = query ? await searchArticles(c.env.DB, query) : []
+  c.header('cache-control', 'public, max-age=60')
+  return c.html(renderSearchPage(query, results))
+})
+
+app.get('/archive', async (c) => {
+  const months = await listMonths(c.env.DB)
+  c.header('cache-control', 'public, max-age=300')
+  return c.html(renderArchiveIndexPage(months))
+})
+
+app.get('/archive/:month', async (c) => {
+  const month = c.req.param('month')
+  if (!/^\d{4}-\d{2}$/.test(month)) return c.notFound()
+  const articles = await listArticlesByMonth(c.env.DB, month)
+  if (articles.length === 0) return c.notFound()
+  c.header('cache-control', 'public, max-age=300')
+  return c.html(renderArchiveMonthPage(month, articles))
 })
 
 // `/posts/<slug>.md` serves the raw markdown (slugs themselves never contain dots)

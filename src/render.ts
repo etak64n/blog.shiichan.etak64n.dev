@@ -1,5 +1,5 @@
 import { marked } from 'marked'
-import type { ArticleListRow, ArticleRow, SourceCount, TagCount } from './db'
+import type { ArticleListRow, ArticleRow, MonthCount, SourceCount, TagCount } from './db'
 
 const SITE_TITLE = 'shiichan blog'
 const SITE_ORIGIN = 'https://blog.shiichan.etak64n.dev'
@@ -13,6 +13,12 @@ const esc = (s: string) =>
   )
 
 const fmtDate = (iso: string) => iso.slice(0, 10)
+
+// '2026-07' -> '2026年7月'
+const fmtMonth = (month: string) => {
+  const [y, m] = month.split('-')
+  return `${y}年${Number(m)}月`
+}
 
 export function parseTags(json: string): string[] {
   try {
@@ -40,6 +46,7 @@ const ICONS: Record<string, string> = {
   'arrow-up-right': '<path d="M7 7h10v10"/><path d="M7 17 17 7"/>',
   'file-code': '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m10 13-2 2 2 2"/><path d="m14 17 2-2-2-2"/>',
   rss: '<path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/>',
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
   moon: '<path d="M12 3a6.364 6.364 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
 }
@@ -199,6 +206,27 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 .nav-icon:hover { color: var(--cyan); }
 .nav-icon .icon { width: 16px; height: 16px; }
+/* Header search bar (reference: azukiazusa1/sapper-blog-app SearchBar) */
+.header-search {
+  display: flex; align-items: center; gap: .6em;
+  border: 1px solid var(--line-bright); border-radius: 8px;
+  background: var(--stat-bg); padding: 0 .8em; height: 36px; width: 220px;
+  margin-right: .4em; transition: border-color .2s ease;
+}
+.header-search:focus-within { border-color: var(--cyan); }
+.header-search .icon { color: var(--dim); }
+.hs-input {
+  flex: 1; min-width: 0; background: none; border: none;
+  font-family: var(--mono); font-size: .78rem; color: var(--text);
+}
+.hs-input:focus, .hs-input:focus-visible { outline: none; }
+.hs-input::placeholder { color: var(--dim); text-transform: uppercase; letter-spacing: .08em; }
+.hs-kbd {
+  font-family: var(--mono); font-size: .64rem; color: var(--dim);
+  border: 1px solid var(--line); border-radius: 4px; padding: .05em .45em;
+  background: var(--panel); white-space: nowrap;
+}
+.nav-search { display: none; }
 .theme-toggle .sun, .theme-toggle .moon { display: none; line-height: 0; }
 :root:not([data-theme='light']) .theme-toggle .sun { display: inline-flex; }
 :root[data-theme='light'] .theme-toggle .moon { display: inline-flex; }
@@ -398,6 +426,42 @@ button { -webkit-tap-highlight-color: transparent; }
 .prose th { background: var(--panel-2); font-family: var(--mono); font-size: .78rem; }
 .prose img { max-width: 100%; border-radius: 10px; }
 
+/* ---- search page ---- */
+.search-form {
+  display: flex; align-items: center; gap: .7em; max-width: 640px;
+  border: 1px solid var(--line-bright); border-radius: 10px;
+  background: var(--panel); padding: 0 1em; height: 52px;
+  margin-bottom: 34px; transition: border-color .2s ease;
+}
+.search-form:focus-within { border-color: var(--cyan); }
+.search-form .icon { width: 17px; height: 17px; color: var(--dim); }
+.search-form .hs-input { font-size: .95rem; height: 100%; }
+.search-btn {
+  font-family: var(--mono); font-size: .74rem; font-weight: 600; letter-spacing: .08em;
+  color: var(--cyan); background: var(--tag-bg); border: 1px solid var(--accent-border-soft);
+  border-radius: 6px; padding: .45em 1.2em; cursor: pointer;
+  text-transform: uppercase; transition: background .2s ease;
+}
+.search-btn:hover { background: var(--tag-bg-hover); }
+.search-hint { color: var(--dim); font-size: .88rem; }
+
+/* ---- archive ---- */
+.month-list {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px;
+}
+.month-list a {
+  display: flex; align-items: baseline; gap: .8em;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: .9em 1.2em; text-decoration: none; color: var(--text);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.month-list a:hover { border-color: var(--accent-border); box-shadow: 0 4px 18px var(--glow); }
+.month-list .m { font-family: var(--mono); font-weight: 600; color: var(--cyan); white-space: nowrap; }
+.month-list .n { margin-left: auto; font-family: var(--mono); font-size: .72rem; color: var(--dim); white-space: nowrap; }
+.src-list a { color: var(--text); text-decoration: none; transition: color .2s ease; }
+.src-list a:hover { color: var(--cyan); }
+
 /* ---- tag page / misc ---- */
 .page-head { padding-top: 52px; padding-bottom: 8px; }
 .page-head h1 {
@@ -422,6 +486,10 @@ button { -webkit-tap-highlight-color: transparent; }
 .site-footer a:hover { color: var(--cyan); }
 
 /* ---- small screens ---- */
+@media (max-width: 760px) {
+  .header-search { display: none; }
+  .nav-search { display: inline-flex; }
+}
 @media (max-width: 560px) {
   .logo { font-size: .95rem; }
   .site-nav { gap: .1em; font-size: .72rem; letter-spacing: .04em; }
@@ -429,6 +497,9 @@ button { -webkit-tap-highlight-color: transparent; }
   .nav-icon { width: 34px; height: 34px; }
   .hero { padding-top: 44px; padding-bottom: 32px; }
   .card.featured { padding: 20px 22px; }
+}
+@media (max-width: 480px) {
+  .nav-rss { display: none; } /* RSS stays reachable from the footer */
 }
 
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
@@ -462,6 +533,16 @@ const THEME_TOGGLE_SCRIPT = `
     var next = current === 'light' ? 'dark' : 'light';
     root.dataset.theme = next;
     try { localStorage.setItem('theme', next); } catch (e) {}
+  });
+})();
+(function () {
+  document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      var input = document.querySelector('.hs-input');
+      if (input && input.offsetParent !== null) { input.focus(); }
+      else { location.href = '/search'; }
+    }
   });
 })();
 `
@@ -515,7 +596,13 @@ ${opts.head ?? ''}
       ${navLink('/', 'Posts', 'posts', opts.nav)}
       ${navLink('/tags', 'Tags', 'tags', opts.nav)}
       ${navLink('/about', 'About', 'about', opts.nav)}
-      <a class="nav-icon" href="/feed.xml" aria-label="RSS フィード">${icon('rss')}</a>
+      <form class="header-search" action="/search" method="get" target="_blank" rel="noopener" role="search">
+        ${icon('search')}
+        <input class="hs-input" type="search" name="q" placeholder="Search" aria-label="記事を検索" maxlength="100">
+        <kbd class="hs-kbd" aria-hidden="true">⌘K</kbd>
+      </form>
+      <a class="nav-icon nav-search" href="/search" aria-label="記事を検索">${icon('search')}</a>
+      <a class="nav-icon nav-rss" href="/feed.xml" aria-label="RSS フィード">${icon('rss')}</a>
       <button class="nav-icon theme-toggle" id="theme-toggle" type="button" aria-label="ライト/ダークテーマ切り替え">
         <span class="sun">${icon('sun')}</span><span class="moon">${icon('moon')}</span>
       </button>
@@ -526,7 +613,7 @@ ${main}
 <footer class="site-footer">
   <div class="wrap">
     <span>${esc(SITE_TITLE)} — daily tech news, written by shiichan</span>
-    <span>毎日更新 / <a href="/feed.xml">RSS</a></span>
+    <span>毎日更新 / <a href="/search">Search</a> / <a href="/archive">Archive</a> / <a href="/feed.xml">RSS</a></span>
   </div>
 </footer>
 <script>${THEME_TOGGLE_SCRIPT}</script>
@@ -577,6 +664,7 @@ export function renderIndexPage(
   rows: ArticleListRow[],
   tags: TagCount[],
   sources: SourceCount[],
+  months: MonthCount[],
 ): string {
   const totalArticles = sources.reduce((sum, s) => sum + s.count, 0)
   const [latest, ...rest] = rows
@@ -615,6 +703,19 @@ ${
 <div class="panel" style="animation-delay:200ms">
   <h2 class="section-title">Sources</h2>
   ${sourceList(sources)}
+</div>
+<div class="panel" style="animation-delay:240ms">
+  <h2 class="section-title">Archive</h2>
+  <ul class="src-list">
+    ${months
+      .slice(0, 12)
+      .map(
+        (m) =>
+          `<li><a href="/archive/${esc(m.month)}">${fmtMonth(m.month)}</a><span class="n">${m.count}</span></li>`,
+      )
+      .join('\n    ')}
+  </ul>
+  <a class="panel-more" href="/archive">ALL MONTHS ${icon('arrow-up-right')}</a>
 </div>
 <div class="panel" style="animation-delay:280ms">
   <h2 class="section-title">About</h2>
@@ -706,6 +807,85 @@ export function renderAboutPage(sources: SourceCount[]): string {
       description: `${SITE_TITLE} としぃちゃんの紹介`,
       canonicalPath: '/about',
       nav: 'about',
+    },
+    main,
+  )
+}
+
+export function renderSearchPage(query: string, rows: ArticleListRow[]): string {
+  const count = query
+    ? `${rows.length} HIT${rows.length === 1 ? '' : 'S'} FOR &ldquo;${esc(query)}&rdquo;`
+    : 'TYPE KEYWORDS TO SEARCH'
+  const results = !query
+    ? '<p class="search-hint">タイトル・本文からキーワードで探せるよ。スペース区切りで AND 検索になるからね。</p>'
+    : rows.length
+      ? `<div class="card-grid">${rows.map((r, i) => articleCard(r, i)).join('\n')}</div>`
+      : `<p class="search-hint">「${esc(query)}」に合う記事は見つからなかったよ。別のキーワードでも試してみてね。</p>`
+  const main = `
+<section class="page-head wrap">
+  <h1>SEARCH</h1>
+  <p class="count">${count}</p>
+</section>
+<section class="list-section wrap" id="main">
+  <form class="search-form" action="/search" method="get" role="search">
+    ${icon('search')}
+    <input class="hs-input" type="search" name="q" value="${esc(query)}" placeholder="キーワードで検索"
+      aria-label="記事を検索" maxlength="100" ${query ? '' : 'autofocus'}>
+    <button class="search-btn" type="submit">Search</button>
+  </form>
+  ${results}
+</section>`
+  return layout(
+    {
+      title: query ? `検索: ${query} | ${SITE_TITLE}` : `Search | ${SITE_TITLE}`,
+      description: '記事検索',
+      canonicalPath: '/search',
+    },
+    main,
+  )
+}
+
+export function renderArchiveIndexPage(months: MonthCount[]): string {
+  const total = months.reduce((sum, m) => sum + m.count, 0)
+  const list = months
+    .map(
+      (m) =>
+        `<li><a href="/archive/${esc(m.month)}"><b class="m">${esc(m.month)}</b>${fmtMonth(m.month)}<span class="n">${m.count} POST${m.count === 1 ? '' : 'S'}</span></a></li>`,
+    )
+    .join('\n')
+  const main = `
+<section class="page-head wrap">
+  <h1>ARCHIVE</h1>
+  <p class="count">${months.length} MONTH${months.length === 1 ? '' : 'S'} / ${total} POSTS</p>
+</section>
+<section class="list-section wrap" id="main">
+  <ul class="month-list">${list}</ul>
+</section>`
+  return layout(
+    {
+      title: `Archive | ${SITE_TITLE}`,
+      description: '月別アーカイブ',
+      canonicalPath: '/archive',
+    },
+    main,
+  )
+}
+
+export function renderArchiveMonthPage(month: string, rows: ArticleListRow[]): string {
+  const main = `
+<section class="page-head wrap">
+  <p><a class="backlink" href="/archive">${icon('arrow-left')}ARCHIVE</a></p>
+  <h1>${esc(month)}</h1>
+  <p class="count">${fmtMonth(month)} / ${rows.length} POST${rows.length === 1 ? '' : 'S'}</p>
+</section>
+<section class="list-section wrap" id="main">
+  <div class="card-grid">${rows.map((r, i) => articleCard(r, i)).join('\n')}</div>
+</section>`
+  return layout(
+    {
+      title: `${fmtMonth(month)} | ${SITE_TITLE}`,
+      description: `${fmtMonth(month)}の記事一覧`,
+      canonicalPath: `/archive/${month}`,
     },
     main,
   )

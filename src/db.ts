@@ -20,6 +20,8 @@ export type TagCount = { tag: string; count: number }
 
 export type SourceCount = { source_name: string; count: number }
 
+export type MonthCount = { month: string; count: number }
+
 const LIST_COLUMNS = 'slug, title, summary, source_name, tags, published_at'
 
 export async function listArticles(db: D1Database, limit = 100): Promise<ArticleListRow[]> {
@@ -65,6 +67,58 @@ export async function listSources(db: D1Database): Promise<SourceCount[]> {
        FROM articles GROUP BY source_name ORDER BY count DESC, source_name ASC`,
     )
     .all<SourceCount>()
+  return results
+}
+
+// Case-insensitive (ASCII) substring search; every term must match somewhere
+// in title/summary/body. LIKE is plenty at this scale — revisit FTS5 when the
+// table grows to thousands of rows.
+export async function searchArticles(
+  db: D1Database,
+  query: string,
+  limit = 50,
+): Promise<ArticleListRow[]> {
+  const terms = query
+    .replace(/[\\%_]/g, (c) => `\\${c}`)
+    .split(/[\s　]+/)
+    .filter(Boolean)
+    .slice(0, 5)
+  if (terms.length === 0) return []
+  const where = terms
+    .map((_, i) => `(title || ' ' || summary || ' ' || body_md) LIKE ?${i + 1} ESCAPE '\\'`)
+    .join(' AND ')
+  const { results } = await db
+    .prepare(
+      `SELECT ${LIST_COLUMNS} FROM articles WHERE ${where} ORDER BY published_at DESC LIMIT ${limit}`,
+    )
+    .bind(...terms.map((t) => `%${t}%`))
+    .all<ArticleListRow>()
+  return results
+}
+
+export async function listMonths(db: D1Database): Promise<MonthCount[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT substr(published_at, 1, 7) AS month, COUNT(*) AS count
+       FROM articles GROUP BY month ORDER BY month DESC`,
+    )
+    .all<MonthCount>()
+  return results
+}
+
+export async function listArticlesByMonth(
+  db: D1Database,
+  month: string,
+  limit = 200,
+): Promise<ArticleListRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT ${LIST_COLUMNS} FROM articles
+       WHERE substr(published_at, 1, 7) = ?1
+       ORDER BY published_at DESC LIMIT ?2`,
+    )
+    .bind(month, limit)
+    .all<ArticleListRow>()
   return results
 }
 

@@ -10,6 +10,9 @@ Fully automated blog that publishes articles ingested from shiichan-reporter
 - `GET /posts/:slug.md` — raw Markdown with YAML front matter (`text/markdown`)
 - `GET /tags` — tag cloud (sized by article count)
 - `GET /tags/:tag` — articles carrying the tag (404 when the tag has no articles)
+- `GET /search?q=` — keyword search (LIKE over title/summary/body, AND terms);
+  the header search bar submits here with `target="_blank"`
+- `GET /archive` — month list; `GET /archive/:month` (YYYY-MM) — posts of a month
 - `GET /about` — about page (how the automation works, sources)
 - `GET /feed.xml` — RSS 2.0 feed (latest 30 articles)
 - `POST /api/articles` — ingest (upsert), GitHub Actions OIDC auth
