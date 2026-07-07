@@ -48,6 +48,18 @@ export async function countArticles(db: D1Database): Promise<number> {
   return row?.n ?? 0
 }
 
+export async function listArticlesPage(
+  db: D1Database,
+  limit: number,
+  offset: number,
+): Promise<ArticleListRow[]> {
+  const { results } = await db
+    .prepare(`SELECT ${LIST_COLUMNS} FROM articles ORDER BY published_at DESC LIMIT ?1 OFFSET ?2`)
+    .bind(limit, offset)
+    .all<ArticleListRow>()
+  return results
+}
+
 // Record one view in today's bucket. Fire-and-forget from the request handler.
 export async function recordView(db: D1Database, slug: string): Promise<void> {
   await db

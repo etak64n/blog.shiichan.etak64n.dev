@@ -8,6 +8,7 @@ import {
   listArticles,
   listArticlesByMonth,
   listArticlesByTag,
+  listArticlesPage,
   listMonths,
   listPopular,
   listSources,
@@ -81,10 +82,16 @@ async function home(c: Ctx, lang: Lang) {
   return c.html(renderIndexPage({ latest, popular, tags, sources, months, total }, lang))
 }
 
+const POSTS_PER_PAGE = 18
+
 async function posts(c: Ctx, lang: Lang) {
-  const [articles, total] = await Promise.all([listArticles(c.env.DB, 1000), countArticles(c.env.DB)])
+  const total = await countArticles(c.env.DB)
+  const pages = Math.max(1, Math.ceil(total / POSTS_PER_PAGE))
+  const requested = parseInt(c.req.query('page') ?? '1', 10)
+  const page = Math.min(Math.max(1, Number.isNaN(requested) ? 1 : requested), pages)
+  const articles = await listArticlesPage(c.env.DB, POSTS_PER_PAGE, (page - 1) * POSTS_PER_PAGE)
   c.header('cache-control', 'public, max-age=300')
-  return c.html(renderAllPostsPage(articles, total, lang))
+  return c.html(renderAllPostsPage(articles, total, page, pages, lang))
 }
 
 async function search(c: Ctx, lang: Lang) {

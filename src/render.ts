@@ -100,6 +100,8 @@ type Strings = {
   footerTag: string
   footerRight: string
   rssDesc: string
+  prev: string
+  next: string
 }
 
 const T: Record<Lang, Strings> = {
@@ -139,6 +141,8 @@ const T: Record<Lang, Strings> = {
     footerTag: 'shiichan blog — daily tech news, written by shiichan',
     footerRight: '毎日更新',
     rssDesc: SITE_DESCRIPTION,
+    prev: '前へ',
+    next: '次へ',
   },
   en: {
     htmlLang: 'en',
@@ -176,6 +180,8 @@ const T: Record<Lang, Strings> = {
     footerTag: 'shiichan blog — daily tech news, written by shiichan',
     footerRight: 'Daily updates',
     rssDesc: SITE_DESCRIPTION_EN,
+    prev: 'Prev',
+    next: 'Next',
   },
 }
 
@@ -214,6 +220,7 @@ function sourceBrand(name: string): string {
 // Lucide-style inline SVG icons (24x24 stroke), rendered at 14px via CSS
 const ICONS: Record<string, string> = {
   'arrow-left': '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>',
+  'arrow-right': '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
   'arrow-up-right': '<path d="M7 7h10v10"/><path d="M7 17 17 7"/>',
   'file-code': '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m10 13-2 2 2 2"/><path d="m14 17 2-2-2-2"/>',
   rss: '<path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/>',
@@ -553,6 +560,19 @@ button { -webkit-tap-highlight-color: transparent; }
 .about-text b { color: var(--primary); font-weight: 700; }
 .more-row { margin-top: 24px; }
 .more-row .panel-more { font-size: .82rem; }
+.pagination {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin-top: 40px; font-family: var(--mono); font-size: .82rem;
+}
+.pg-btn {
+  display: inline-flex; align-items: center; gap: .4em;
+  color: var(--primary); text-decoration: none; font-weight: 600;
+  border: 1.5px solid var(--line-strong); border-radius: 999px; padding: .5em 1.2em;
+  background: var(--surface); transition: background .15s ease, border-color .15s ease;
+}
+.pg-btn:hover { background: var(--tag-bg); border-color: var(--accent); }
+.pg-btn.disabled { color: var(--muted); opacity: .45; pointer-events: none; }
+.pg-info { color: var(--muted); }
 
 /* ---- about hero ---- */
 .about-hero { display: flex; align-items: center; gap: 26px; margin-bottom: 8px; }
@@ -1071,8 +1091,31 @@ ${popularPanel(popular, lang)}
   )
 }
 
-export function renderAllPostsPage(rows: ArticleListRow[], total: number, lang: Lang): string {
+function pagination(base: string, page: number, pages: number, lang: Lang): string {
+  if (pages <= 1) return ''
   const t = T[lang]
+  const link = (p: number, label: string, cls: string) =>
+    `<a class="pg-btn ${cls}" href="${base}/posts?page=${p}">${label}</a>`
+  const disabled = (label: string, cls: string) => `<span class="pg-btn ${cls} disabled">${label}</span>`
+  const prev = `${icon('arrow-left')}${esc(t.prev)}`
+  const next = `${esc(t.next)}${icon('arrow-right')}`
+  return `
+<nav class="pagination" aria-label="Pagination">
+  ${page > 1 ? link(page - 1, prev, 'prev') : disabled(prev, 'prev')}
+  <span class="pg-info">${page} / ${pages}</span>
+  ${page < pages ? link(page + 1, next, 'next') : disabled(next, 'next')}
+</nav>`
+}
+
+export function renderAllPostsPage(
+  rows: ArticleListRow[],
+  total: number,
+  page: number,
+  pages: number,
+  lang: Lang,
+): string {
+  const t = T[lang]
+  const base = basePath(lang)
   const main = `
 <section class="page-head wrap">
   <h1>ALL POSTS</h1>
@@ -1080,10 +1123,11 @@ export function renderAllPostsPage(rows: ArticleListRow[], total: number, lang: 
 </section>
 <section class="list-section wrap" id="main">
   <div class="card-grid">${rows.map((r, i) => articleCard(r, i, lang)).join('\n')}</div>
+  ${pagination(base, page, pages, lang)}
 </section>`
   return layout(
     {
-      title: `Posts | ${SITE_TITLE}`,
+      title: pages > 1 ? `Posts (${page}/${pages}) | ${SITE_TITLE}` : `Posts | ${SITE_TITLE}`,
       description: lang === 'en' ? 'All posts on shiichan blog' : `${SITE_TITLE} の全記事一覧`,
       canonicalPath: '/posts',
       nav: 'posts',
