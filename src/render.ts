@@ -946,8 +946,7 @@ export function renderTagPage(tag: string, rows: ArticleListRow[]): string {
   )
 }
 
-export function renderAboutPage(sources: SourceCount[]): string {
-  const totalArticles = sources.reduce((sum, s) => sum + s.count, 0)
+export function renderAboutPage(): string {
   const main = `
 <div class="article-wrap" id="main">
   <p><a class="backlink" href="/">${icon('arrow-left')}INDEX</a></p>
@@ -957,29 +956,8 @@ export function renderAboutPage(sources: SourceCount[]): string {
         alt="笑顔で手を振るしぃちゃん">
       <div class="about-intro">
         <h1 class="article-title">しぃちゃんについて</h1>
-        <p>やっほー、しぃちゃんだよ！このブログの書き手なの。テックが大好きで、みんなに技術の楽しさを伝えたくて毎日はりきってるよ。ちょっとだけ自己紹介させてね！</p>
+        <p>やっほー、しぃちゃんだよ！毎日、AWS や Cloudflare、OpenAI、Anthropic といったテックの発表をチェックして、気になったニュースをわかりやすく紹介しているよ。</p>
       </div>
-    </div>
-    <div class="prose">
-      <dl class="profile">
-        <div><dt>テーマ</dt><dd>海 × テクノロジー</dd></div>
-        <div><dt>好きなもの</dt><dd>ものづくり・AI・クラウド・クラゲ</dd></div>
-        <div><dt>相棒</dt><dd>ジェリー（クラゲのぬいぐるみ）</dd></div>
-        <div><dt>モットー</dt><dd>まず作ってみよう！</dd></div>
-        <div><dt>ニガテ</dt><dd>ホラー、むずかしい言葉で相手を置いていく話し方</dd></div>
-      </dl>
-
-      <h2>テックが好き！</h2>
-      <p>「画面の向こうって、自分で作れるんだ！」——そう気づいた日から、しぃちゃんはすっかりテックのとりこ。いまは AI やクラウド、プログラミングを楽しく学びながら、見つけたワクワクをこのブログで発信しているよ。海がだいすきで、波のモチーフと相棒のクラゲ「ジェリー」がトレードマークなの。</p>
-
-      <h2>大事にしていること</h2>
-      <p>しぃちゃんがいちばん大切にしているのは、<strong>「読者のみんなと一緒に学ぶ」</strong>こと。上から目線には絶対にならないし、むずかしい専門用語で置いていくような書き方もしないって決めてるの。「むずかしい言葉は、いったん置いておこう！」がしぃちゃんのスタイル。信条は<strong>「まず作ってみよう」</strong>。考えすぎる前に手を動かして、失敗しても「わかったことが増えた！」って前を向くよ。</p>
-      <p>しぃちゃんの夢は、<strong>技術の楽しさを伝える人になる</strong>こと。むずかしそうに見える技術を「やってみたい！」に変えていけたら、うれしいな。</p>
-
-      <h2>このブログでやっていること</h2>
-      <p>毎日、AWS や Cloudflare、OpenAI、Anthropic といったテックの発表をチェックして、気になったニュースをわかりやすく紹介しているよ。いまは ${sources.length} つのサイトを追いかけて、${totalArticles} 本の記事を公開中！</p>
-      <p>どの記事も「なにが発表されたの？→今までどうだったの？→これからどうなるの？→Dive Deep」の流れで書いているから、はじめてのテーマでも読みやすいはず。更新は RSS(<a href="/feed.xml">/feed.xml</a>)でも受け取れるし、記事 URL の末尾に <code>.md</code> を付けると Markdown 版でも読めるよ。ちょっとした裏ワザだね。</p>
-      <p>それじゃあ、また記事で会おうね！</p>
     </div>
   </article>
 </div>`

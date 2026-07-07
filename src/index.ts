@@ -140,10 +140,9 @@ app.get('/tags/:tag', async (c) => {
   return c.html(renderTagPage(c.req.param('tag'), articles))
 })
 
-app.get('/about', async (c) => {
-  const sources = await listSources(c.env.DB)
+app.get('/about', (c) => {
   c.header('cache-control', 'public, max-age=300')
-  return c.html(renderAboutPage(sources))
+  return c.html(renderAboutPage())
 })
 
 app.get('/feed.xml', async (c) => {
