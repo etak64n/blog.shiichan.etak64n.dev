@@ -96,7 +96,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .logo {
   display: inline-flex; align-items: center; text-decoration: none; flex: none;
 }
-.logo .logo-img { height: 30px; width: auto; }
+.logo .logo-img { height: 46px; width: auto; }
 /* Hand-lettered wordmark: swap the colour version (light theme) for the
    lightened version (dark theme), mirroring the theme-toggle logic. Base =
    light appearance; dark applies via media query / [data-theme='dark']. */
@@ -743,7 +743,7 @@ button { -webkit-tap-highlight-color: transparent; }
   .site-nav a.textlink:hover, .site-nav a.active { background: var(--tag-bg); }
 }
 @media (max-width: 560px) {
-  .logo .logo-img { height: 26px; }
+  .logo .logo-img { height: 34px; }
   .nav-icon { width: 34px; height: 34px; }
 }
 
