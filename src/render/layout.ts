@@ -170,7 +170,9 @@ export function layout(opts: LayoutOpts, main: string): string {
   const base = basePath(lang)
   const description = opts.description ?? t.desc
   const path = opts.canonicalPath ?? '/'
-  const ogImage = opts.ogImage ? `${SITE_ORIGIN}${opts.ogImage}` : `${SITE_ORIGIN}/og.png`
+  // Bump ?v when og.png changes: link-preview caches (Discord, Slack, X…) key
+  // on the URL, so a same-URL image swap won't refresh until the URL changes.
+  const ogImage = opts.ogImage ? `${SITE_ORIGIN}${opts.ogImage}` : `${SITE_ORIGIN}/og.png?v=2`
   const canonical = `${SITE_ORIGIN}${base}${path}`
   const jaUrl = `${SITE_ORIGIN}${path}`
   const enUrl = `${SITE_ORIGIN}/en${path}`
