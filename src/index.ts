@@ -91,7 +91,10 @@ type Ctx = Context<{ Bindings: Env }>
 // timezone) and article pages (the best-effort view counter needs the Worker to
 // run). Security headers are (re)applied by the global middleware on every hit,
 // so the cached copy only needs the route's own headers.
-const EDGE_TTL = 600 // seconds; list pages are static between publishes
+// 1 day. Publishing purges the edge cache (reporter's post_articles.py), so a
+// long TTL is safe: list pages update instantly on publish and only fall back
+// to the TTL as a self-heal if a purge is ever missed.
+const EDGE_TTL = 86400
 async function edgeCached(
   c: Ctx,
   render: () => Promise<Response> | Response,
