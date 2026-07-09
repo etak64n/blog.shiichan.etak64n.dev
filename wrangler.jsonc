@@ -40,6 +40,7 @@
       "www.anthropic.com",
       "anthropic.com",
       "claude.com",
+      "github.com",
       "jpwinsup.github.io"
     ],
     // Local development only. Keep empty in production (empty = disabled).
