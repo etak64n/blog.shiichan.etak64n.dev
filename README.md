@@ -39,8 +39,8 @@ The ingest API accepts only GitHub Actions OIDC tokens:
 No long-lived secret is stored anywhere. Nothing but the watcher repository's
 Actions on `main` can publish.
 
-For local development only, put `DEV_BEARER_TOKEN=<random string>` in `.dev.vars`
-to allow that bearer token as well (empty in production = disabled).
+For local development only, put `DEV_BEARER_TOKEN=<random string>` in `.env`
+to allow that bearer token as well under `cf dev` (none in production = disabled).
 
 ## Ingest payload (validated with zod)
 
@@ -60,30 +60,32 @@ to allow that bearer token as well (empty in production = disabled).
 ## Setup
 
 ```sh
-npm install
-npx wrangler d1 create blog-shiichan   # paste the database_id into wrangler.jsonc
-npm run db:migrate:remote
-npm run check                          # typecheck
-npm run deploy                         # served at blog.shiichan.etak64n.dev via routes (old sheechan domain 301-redirects)
+pnpm install
+cp .env.example .env                       # fill in CLOUDFLARE_ACCOUNT_ID
+pnpm exec cf auth login
+pnpm exec cf d1 create --name blog-shiichan  # paste the database ID into cloudflare.config.ts and package.json
+pnpm db:migrate:remote
+pnpm typecheck
+pnpm exec cf deploy                        # served at blog.shiichan.etak64n.dev (old sheechan domain 301-redirects)
 ```
 
 Local development:
 
 ```sh
-npm run db:migrate:local
-npm run dev
+pnpm db:migrate:local
+pnpm exec cf dev
 ```
 
 ## Adding a monitored site
 
 Together with adding it to the watcher's `sources.json`, add the new site's
-domain to `ALLOWED_SOURCE_HOSTS` in `wrangler.jsonc` and `npm run deploy`
+domain to `ALLOWED_SOURCE_HOSTS` in `cloudflare.config.ts` and run `pnpm exec cf deploy`
 (used for the source_url host allowlist check).
 
 ## Removing an article
 
 ```sh
-# From the watcher repo's Actions, or locally using the .dev.vars token instead of OIDC
+# From the watcher repo's Actions, or under cf dev using the .env token instead of OIDC
 curl -X DELETE https://blog.shiichan.etak64n.dev/api/articles/<slug> \
   -H "Authorization: Bearer <token>"
 ```

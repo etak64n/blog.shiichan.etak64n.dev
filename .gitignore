@@ -1,7 +1,8 @@
 node_modules/
-.wrangler/
-.dev.vars
-worker-configuration.d.ts
+.cloudflare/
+.env
+.env.*
+!.env.example
 
 # macOS
 .DS_Store
