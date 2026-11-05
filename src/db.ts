@@ -1,3 +1,5 @@
+import { rankRelated, type RelatedCandidate } from './related'
+import { parseTags } from './render/helpers'
 import type { Article } from './schema'
 
 export type ArticleRow = {
@@ -373,56 +375,64 @@ export async function getArticle(db: D1Database, slug: string): Promise<ArticleR
   return db.prepare('SELECT * FROM articles WHERE slug = ?').bind(slug).first<ArticleRow>()
 }
 
-// Related articles: most tag overlap first, then recency. Falls back to recent
-// articles (excluding self) when there aren't enough tag matches.
+// Related articles (src/related.ts). A page reads the kept list of the article and
+// the listed articles. Only an article without a kept list reads every article,
+// once, to rank them.
 export async function listRelated(
   db: D1Database,
   slug: string,
   tags: string[],
   limit = 4,
 ): Promise<ArticleListRow[]> {
-  const cols = LIST_COLUMNS.split(', ')
-    .map((c) => `a.${c}`)
-    .join(', ')
-  const related: ArticleListRow[] = []
-  const seen = new Set<string>([slug])
-
-  if (tags.length > 0) {
-    const placeholders = tags.map((_, i) => `?${i + 2}`).join(', ')
-    const { results } = await db
-      .prepare(
-        `SELECT ${cols}, COUNT(*) AS shared
-         FROM articles a, json_each(a.tags) AS je
-         WHERE a.slug != ?1 AND je.value IN (${placeholders})
-         GROUP BY a.slug
-         ORDER BY shared DESC, a.published_at DESC
-         LIMIT ${limit}`,
-      )
-      .bind(slug, ...tags)
-      .all<ArticleListRow>()
-    for (const r of results) {
-      related.push(r)
-      seen.add(r.slug)
-    }
+  let related = await readRelated(db, slug)
+  if (related === null) {
+    related = await computeRelated(db, slug, tags, limit)
+    await saveRelated(db, slug, related)
   }
+  return listArticlesBySlugs(db, related)
+}
 
-  if (related.length < limit) {
-    const { results } = await db
-      .prepare(
-        `SELECT ${LIST_COLUMNS} FROM articles
-         WHERE slug != ?1 ORDER BY published_at DESC, created_at DESC, rowid DESC LIMIT ${limit + 1}`,
-      )
-      .bind(slug)
-      .all<ArticleListRow>()
-    for (const r of results) {
-      if (related.length >= limit) break
-      if (!seen.has(r.slug)) {
-        related.push(r)
-        seen.add(r.slug)
-      }
-    }
-  }
-  return related
+// Ranks the related articles of an article again, such as after it is posted.
+export async function refreshRelated(db: D1Database, slug: string, tags: string[], limit = 4): Promise<void> {
+  await saveRelated(db, slug, await computeRelated(db, slug, tags, limit))
+}
+
+async function readRelated(db: D1Database, slug: string): Promise<string[] | null> {
+  const row = await db
+    .prepare('SELECT related FROM article_related WHERE slug = ?')
+    .bind(slug)
+    .first<{ related: string }>()
+  return row ? parseTags(row.related) : null
+}
+
+async function computeRelated(db: D1Database, slug: string, tags: string[], limit: number): Promise<string[]> {
+  const { results } = await db
+    .prepare('SELECT slug, tags, published_at, created_at, rowid FROM articles')
+    .all<Omit<RelatedCandidate, 'tags'> & { tags: string }>()
+  const candidates = results.map((r) => ({ ...r, tags: parseTags(r.tags) }))
+  return rankRelated(slug, tags, candidates, limit)
+}
+
+async function saveRelated(db: D1Database, slug: string, related: string[]): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO article_related (slug, related, computed_at) VALUES (?1, ?2, datetime('now'))
+       ON CONFLICT (slug) DO UPDATE SET related = ?2, computed_at = datetime('now')`,
+    )
+    .bind(slug, JSON.stringify(related))
+    .run()
+}
+
+// The articles of these slugs, in the same order. A slug of a deleted article is skipped.
+async function listArticlesBySlugs(db: D1Database, slugs: string[]): Promise<ArticleListRow[]> {
+  if (slugs.length === 0) return []
+  const placeholders = slugs.map((_, i) => `?${i + 1}`).join(', ')
+  const { results } = await db
+    .prepare(`SELECT ${LIST_COLUMNS} FROM articles WHERE slug IN (${placeholders})`)
+    .bind(...slugs)
+    .all<ArticleListRow>()
+  const bySlug = new Map(results.map((r) => [r.slug, r]))
+  return slugs.flatMap((s) => bySlug.get(s) ?? [])
 }
 
 export async function upsertArticle(db: D1Database, a: Article): Promise<void> {
@@ -461,5 +471,6 @@ export async function upsertArticle(db: D1Database, a: Article): Promise<void> {
 export async function deleteArticle(db: D1Database, slug: string): Promise<boolean> {
   const res = await db.prepare('DELETE FROM articles WHERE slug = ?').bind(slug).run()
   await db.prepare('DELETE FROM article_views WHERE slug = ?').bind(slug).run()
+  await db.prepare('DELETE FROM article_related WHERE slug = ?').bind(slug).run()
   return res.meta.changes > 0
 }

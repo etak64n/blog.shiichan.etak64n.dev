@@ -16,6 +16,7 @@ import {
   listMonths,
   listPopular,
   listRelated,
+  refreshRelated,
   listSources,
   listTags,
   recordView,
@@ -207,7 +208,11 @@ async function post(c: Ctx, lang: Lang) {
   }
   // Tally the view without delaying the response; popularity is best-effort
   c.executionCtx.waitUntil(recordView(c.env.DB, slug).catch(() => {}))
-  const related = await listRelated(c.env.DB, slug, parseTags(article.tags))
+  // Related articles are best-effort too: the page shows without them if they fail
+  const related = await listRelated(c.env.DB, slug, parseTags(article.tags)).catch((error) => {
+    console.error('related articles failed', slug, error)
+    return []
+  })
   return c.html(await renderArticlePage(article, related, lang))
 }
 
@@ -295,6 +300,10 @@ app.post('/api/articles', async (c) => {
   }
 
   await upsertArticle(c.env.DB, article)
+  // The post stands even if ranking its related articles fails
+  await refreshRelated(c.env.DB, article.slug, article.tags).catch((error) => {
+    console.error('related articles failed', article.slug, error)
+  })
   return c.json({ ok: true, slug: article.slug }, 201)
 })
 
