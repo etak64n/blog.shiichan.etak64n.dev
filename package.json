@@ -2,6 +2,7 @@
   "name": "blog-shiichan",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@12.16.1",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",

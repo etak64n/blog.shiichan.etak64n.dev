@@ -1,0 +1,11 @@
+# Dependencies may run install scripts only when they are listed here.
+allowBuilds:
+  esbuild: true
+  workerd: true
+  # sharp ships prebuilt binaries, so its install script does nothing that Wrangler needs.
+  sharp: false
+
+# Supply-chain hardening: skip releases younger than a day, and accept
+# dependencies only from the npm registry.
+minimumReleaseAge: 1440
+blockExoticSubdeps: true
