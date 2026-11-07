@@ -104,7 +104,9 @@ export async function contentSecurityPolicy(): Promise<string> {
   )
   cspCache = [
     "default-src 'self'",
-    `script-src 'self' ${hashes.join(' ')}`,
+    // Cloudflare Web Analytics adds its beacon from static.cloudflareinsights.com to every
+    // page, and the beacon reports to /cdn-cgi/rum on this origin (connect-src 'self').
+    `script-src 'self' ${hashes.join(' ')} https://static.cloudflareinsights.com`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     'font-src https://fonts.gstatic.com',
     "img-src 'self' data:",
